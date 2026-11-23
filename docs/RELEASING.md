@@ -30,6 +30,12 @@ After publishing, jsDelivr and unpkg serve the package automatically:
 
 ## Notes
 
+- `npm run deploy:site` also notifies IndexNow (Bing, Yandex, Naver, Seznam…) about every URL in the sitemap.
+  Submit specific pages with `npm run indexnow -- /docs/install/`. The key file `site/public/<key>.txt` is public by
+  design. Google doesn't use IndexNow: submit the sitemap in Search Console.
+- The Install page advertises the latest version **on npm**, so deploying before `npm publish` never shows CDN links
+  that 404; it switches to the new version on the first deploy after publishing.
+
 - Old versions stay downloadable from the website only if you keep their files: copy `dist-site/v/<old>/` forward
   or keep them in `site/public/v/<old>/` before building a new version.
 - Never unpublish a version people depend on; publish a fixed patch release instead.

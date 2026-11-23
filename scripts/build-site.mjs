@@ -246,14 +246,25 @@ encryption();
 rendererDoc();
 // ------------------------------------------------------------------ install page + versioned downloads
 const lib = JSON.parse(readFileSync(join(root, 'dist-lib/package.json'), 'utf8'));
-const version = lib.version;
 const files = ['pixiformui.standalone.js', 'pixiformui.js'];
-mkdirSync(join(out, 'v', version), { recursive: true });
-const downloads = files.map((f) => {
+// Always ship the freshly built version's files…
+mkdirSync(join(out, 'v', lib.version), { recursive: true });
+for (const f of files) {
   const src = join(root, 'dist-lib', f);
   if (!existsSync(src)) throw new Error(`Missing ${src}: run npm run build:lib first`);
-  const buf = readFileSync(src);
-  copyFileSync(src, join(out, 'v', version, f));
+  copyFileSync(src, join(out, 'v', lib.version, f));
+}
+// …but advertise the latest version that's actually on npm, so CDN links never 404
+// between a version bump and `npm publish`.
+let published = null;
+try {
+  const r = await fetch('https://registry.npmjs.org/pixiformui/latest', { signal: AbortSignal.timeout(8000) });
+  if (r.ok) published = (await r.json()).version;
+} catch {}
+const version = published && published !== lib.version && existsSync(join(out, 'v', published, files[0])) ? published : lib.version;
+if (version !== lib.version) console.log(`install page: npm latest is ${version} (built ${lib.version} not published yet)`);
+const downloads = files.map((f) => {
+  const buf = readFileSync(join(out, 'v', version, f));
   return { file: f, url: `/v/${version}/${f}`, sri: `sha384-${createHash('sha384').update(buf).digest('base64')}`, kb: Math.round(gzipSync(buf).length / 1024) };
 });
 const [standalone, esm] = downloads;
@@ -261,7 +272,7 @@ const [standalone, esm] = downloads;
 const sriOf = (p) => `sha384-${createHash('sha384').update(readFileSync(p)).digest('base64')}`;
 const older = existsSync(join(out, 'v'))
   ? readdirSync(join(out, 'v'))
-      .filter((v) => v !== version && existsSync(join(out, 'v', v, 'pixiformui.standalone.js')))
+      .filter((v) => v !== version && v.localeCompare(version, undefined, { numeric: true }) < 0 && existsSync(join(out, 'v', v, 'pixiformui.standalone.js')))
       .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
   : [];
 const olderHtml = older.length

@@ -427,6 +427,7 @@ function layout(p) {
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="/css/site.css" />
+    <script src="/js/menu.js" defer></script>
     ${jsonLd(p)}${p.url === '/docs/guide/' ? '\n    <script src="/js/guide-anchors.js" defer></script>' : ''}
   </head>
   <body>
@@ -434,10 +435,17 @@ function layout(p) {
     <header class="nav">
       <div class="wrap nav-inner">
         <a class="brand" href="/" aria-label="PixiFormUI home"><img src="/favicon.svg" alt="" width="28" height="28" /><span>PixiForm<b>UI</b></span></a>
-        <nav aria-label="Main">
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" hidden>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg>
+        </button>
+        <nav id="site-nav" aria-label="Main">
           <a href="/#features">Features</a>
           <a href="/#demo">Demo</a>
+          <a href="/#integrate">Integrate</a>
+          <a href="/docs/install/">Install</a>
           <a href="/docs/" aria-current="page">Docs</a>
+          <a href="/#contact">Contact</a>
+          <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
         </nav>
       </div>
     </header>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PixiFormUI"><title>PixiFormUI</title>
+  <defs><linearGradient id="kg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#6c63ff"/><stop offset="1" stop-color="#4338ca"/></linearGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#kg)"/>
+  <rect x="11" y="15" width="20" height="5" rx="2.5" fill="#fff" opacity=".55"/>
+  <rect x="11" y="26" width="42" height="24" rx="7" fill="#fff"/>
+  <rect x="17" y="34.5" width="7" height="7" rx="1.6" fill="#4338ca"/>
+  <rect x="27" y="34.5" width="7" height="7" rx="1.6" fill="#4338ca"/>
+  <rect x="37" y="34.5" width="7" height="7" rx="1.6" fill="#4338ca"/>
+  <rect x="47" y="31" width="3" height="14" rx="1.5" fill="#0d9488"/>
+</svg>

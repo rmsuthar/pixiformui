@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PixiFormUI: Secure JavaScript Form Library Rendered on Canvas</title>
+    <meta name="description" content="Secure JavaScript form library: fields are drawn on a canvas so typed values never enter the DOM. Encrypted passwords, shared validation, accessible, zero deps." />
+    <link rel="canonical" href="https://pixiformui.lets.gen.in/" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PixiFormUI" />
+    <meta property="og:title" content="PixiFormUI: Secure JavaScript Form Library Rendered on Canvas" />
+    <meta property="og:description" content="Every field is drawn on a canvas, so what people type never enters the page DOM. Encrypted passwords, shared rules, accessibility and privacy-safe analytics." />
+    <meta property="og:url" content="https://pixiformui.lets.gen.in/" />
+    <meta property="og:image" content="https://pixiformui.lets.gen.in/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PixiFormUI: forms that keep secrets, even from the page they live on." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/css/site.css" />
+    <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "name": "PixiFormUI", "url": "https://pixiformui.lets.gen.in/", "inLanguage": "en"}, {"@type": "SoftwareApplication", "name": "PixiFormUI", "applicationCategory": "DeveloperApplication", "applicationSubCategory": "JavaScript form library", "operatingSystem": "Any (web browser)", "url": "https://pixiformui.lets.gen.in/", "image": "https://pixiformui.lets.gen.in/og-image.png", "description": "Secure JavaScript form library that renders fields on a canvas, with encrypted password fields, shared validation rules, accessibility support and privacy-safe analytics.", "codeRepository":"https://github.com/rmsuthar/pixiformui","license":"https://opensource.org/licenses/MIT","softwareHelp": "https://pixiformui.lets.gen.in/docs/guide/", "featureList": ["Canvas-rendered fields: typed values never enter the DOM", "End-to-end encrypted password fields (ECDH P-256, AES-256-GCM)", "Shared validation rules for browser, server and AI agents", "Screen-reader outline, high contrast, reduced motion", "Privacy-safe analytics adapters", "Web component, React and Angular wrappers", "MCP server for AI assistants"]}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is PixiFormUI?", "acceptedAnswer": {"@type": "Answer", "text": "PixiFormUI is a JavaScript and TypeScript form library that draws every field on an HTML canvas. Typed values live in wipeable memory instead of the page DOM, so browser extensions, session-replay tools and injected scripts can't read them."}}, {"@type": "Question", "name": "How does it protect passwords?", "acceptedAnswer": {"@type": "Answer", "text": "Password fields never become JavaScript strings. On submit they are encrypted in the browser for your server's public key (ECDH P-256, HKDF-SHA256 and AES-256-GCM), bound to a single-use challenge, then wiped from memory. Decryptors are included for Node.js, Python, Go, C#, Ruby, PHP and Java."}}, {"@type": "Question", "name": "Is a canvas form accessible?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. A hidden accessibility outline gives screen readers headings, labelled groups, roles, states and linked error messages, and the forms follow high contrast, forced colors, reduced motion and browser zoom."}}, {"@type": "Question", "name": "Does it work with React, Angular or plain HTML?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Use the \u003cpixi-form> web component in plain HTML, the provided React and Angular wrappers, or the framework-agnostic mountPixiForm() function in Vue, Svelte or anything else."}}, {"@type": "Question", "name": "How big is it, and what does it depend on?", "acceptedAnswer": {"@type": "Answer", "text": "The complete standalone bundle is about 57 KB gzipped and has no runtime dependencies. It needs no WebGL, no workers and no unsafe-eval, so it runs under a strict Content Security Policy."}}, {"@type": "Question", "name": "Can AI assistants fill in the forms?", "acceptedAnswer": {"@type": "Answer", "text": "Through the included MCP server, an assistant can validate and prefill a registration with non-secret details. The person then opens a single-use link and enters the password themselves, so secrets never pass through the AI."}}]}]}</script>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="/" aria-label="PixiFormUI home">
+          <img src="/favicon.svg" alt="" width="28" height="28" />
+          <span>PixiForm<b>UI</b></span>
+        </a>
+        <nav aria-label="Main">
+          <a href="#features">Features</a>
+          <a href="#demo">Demo</a>
+          <a href="#integrate">Integrate</a>
+          <a href="/docs/install/">Install</a>
+          <a href="/docs/">Docs</a>
+          <a href="#contact">Contact</a>
+          <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ============================================================ hero -->
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Secure form toolkit · Canvas 2D · zero dependencies</p>
+            <h1>Forms that keep secrets, even from the page they live on.</h1>
+            <p class="lead">
+              PixiFormUI draws every field on a canvas. What people type lives in wipeable memory, not in the DOM, so
+              browser extensions, session-replay scripts and injected code can't read it with <code>querySelector</code>.
+              Passwords leave the browser encrypted.
+            </p>
+            <div class="cta">
+              <a class="btn primary" href="#demo">Try the live demo</a>
+              <a class="btn" href="/docs/guide/">Read the guide</a>
+            </div>
+            <p class="install-chip"><code>npm install pixiformui</code> <a href="/docs/install/">More install options →</a> <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">Source on GitHub →</a></p>
+            <ul class="stats" aria-label="At a glance">
+              <li><strong>57 KB</strong><span>gzipped, everything included</span></li>
+              <li><strong>0</strong><span>runtime dependencies</span></li>
+              <li><strong>7</strong><span>server languages decrypt it</span></li>
+            </ul>
+          </div>
+          <div class="hero-demo">
+            <div class="window" aria-label="Example sign-in form">
+              <div class="window-bar"><i></i><i></i><i></i><span>sign-in · rendered on canvas</span></div>
+              <div id="hero-form" class="form-host"></div>
+            </div>
+            <p class="hint" id="hero-proof">Type something, then search the page source for it. It isn't there.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ features -->
+      <section id="features" class="section">
+        <div class="wrap">
+          <h2>Everything a sensitive form needs</h2>
+          <p class="section-lead">Security, accessibility and integration features you'd otherwise assemble from a dozen packages.</p>
+          <div class="grid">
+            <article class="card">
+              <span class="ico" aria-hidden="true">◧</span>
+              <h3>Values never touch the DOM</h3>
+              <p>Controls are painted on a canvas. A single hidden input relays keystrokes and is reset after every one, and only trusted events are accepted.</p>
+              <a class="more" href="/docs/guide/security-model/">Security model →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">🔐</span>
+              <h3>End-to-end encrypted passwords</h3>
+              <p>ECDH P-256, HKDF and AES-256-GCM, bound to a single-use challenge and the field name. Decryptors for Node, Python, Go, C#, Ruby, PHP and Java.</p>
+              <a class="more" href="/docs/encryption/">Encryption spec →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">⚖︎</span>
+              <h3>One set of rules</h3>
+              <p>The same rule file validates in the browser, on your server and in AI-agent tools, with JSON Schema generated from it. No drift.</p>
+              <a class="more" href="/docs/guide/shared-rules/">Shared rules →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">♿︎</span>
+              <h3>Accessible by design</h3>
+              <p>A hidden outline gives screen readers headings, groups, roles and linked errors. Follows high contrast, forced colors, reduced motion and zoom.</p>
+              <a class="more" href="/docs/guide/accessibility/">Accessibility →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">🎨</span>
+              <h3>Fully themeable</h3>
+              <p>Describe a palette (theme, text and accent colours) and every token is derived, with contrast checks. Six presets, light and dark.</p>
+              <a class="more" href="/docs/guide/styling-and-theming/">Theming →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">📊</span>
+              <h3>Privacy-safe analytics</h3>
+              <p>Funnels, drop-off fields and error codes for GA4, Tag Manager, Segment, PostHog or your endpoint. Events never contain values.</p>
+              <a class="more" href="/docs/guide/analytics/">Analytics →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">🤖</span>
+              <h3>Ready for AI agents</h3>
+              <p>An MCP server lets assistants validate and prefill a registration. The person sets the password themselves via a single-use link.</p>
+              <a class="more" href="/docs/guide/serialization-ajax-and-mcp/">MCP →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">📱</span>
+              <h3>Mobile first</h3>
+              <p>Native keyboards, SMS code autofill, touch scrolling with momentum, and fields that stay visible above the on-screen keyboard.</p>
+              <a class="more" href="/docs/guide/mobile/">Mobile →</a>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">🧩</span>
+              <h3>Works anywhere</h3>
+              <p>A <code>&lt;pixi-form&gt;</code> web component for plain HTML, wrappers for React and Angular, and a config-only API for everything else.</p>
+              <a class="more" href="/docs/guide/using-pixiform-in-existing-apps-html-react-angular/">Embedding guide →</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ demo -->
+      <section id="demo" class="section alt">
+        <div class="wrap">
+          <h2>Try it</h2>
+          <p class="section-lead">
+            A full sign-up form built from a config object. <strong>Nothing is sent anywhere:</strong> the password is
+            encrypted with a key generated in your browser, and the panel shows exactly what your server would receive.
+          </p>
+          <div class="toolbar" role="group" aria-label="Demo appearance">
+            <div class="swatches" role="radiogroup" aria-label="Accent colour" id="swatches"></div>
+            <div class="seg" role="group" aria-label="Colour mode">
+              <button type="button" data-mode="light">Light</button>
+              <button type="button" data-mode="dark">Dark</button>
+              <button type="button" data-mode="auto" aria-pressed="true">Auto</button>
+            </div>
+            <div class="seg" role="group" aria-label="Text size">
+              <button type="button" data-scale="1" aria-pressed="true">A</button>
+              <button type="button" data-scale="1.15">A+</button>
+              <button type="button" data-scale="1.3">A++</button>
+            </div>
+          </div>
+          <div class="demo-grid">
+            <div id="demo-form" class="form-host demo-host"></div>
+            <aside class="panels">
+              <div class="tabs" role="tablist" aria-label="Inspect">
+                <button role="tab" id="tab-payload" aria-controls="panel-payload" aria-selected="true">Server receives</button>
+                <button role="tab" id="tab-form" aria-controls="panel-form" aria-selected="false" tabindex="-1">Events</button>
+                <button role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false" tabindex="-1">Analytics</button>
+                <button role="tab" id="tab-dom" aria-controls="panel-dom" aria-selected="false" tabindex="-1">Page DOM</button>
+              </div>
+              <div class="panel" role="tabpanel" id="panel-payload" aria-labelledby="tab-payload">
+                <p class="muted">Submit the form to see the JSON body. The password becomes a <code>pfe1.…</code> envelope only your server's private key can open.</p>
+                <pre id="payload"><code>// waiting for a submit…</code></pre>
+              </div>
+              <div class="panel" role="tabpanel" id="panel-form" aria-labelledby="tab-form" hidden>
+                <p class="muted">Lifecycle and form events from <code>config.on</code> / <code>handle.on()</code>. Also available as <code>pixiform-*</code> DOM events.</p>
+                <ol id="form-events" class="events"></ol>
+              </div>
+              <div class="panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" hidden>
+                <p class="muted">Live events from <code>FormAnalytics</code>. Field names, timings and error codes only, never values.</p>
+                <ol id="events" class="events"></ol>
+              </div>
+              <div class="panel" role="tabpanel" id="panel-dom" aria-labelledby="tab-dom" hidden>
+                <p class="muted">Checked live against this page's HTML and every input's value:</p>
+                <dl class="facts" id="dom-facts"></dl>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ how -->
+      <section class="section">
+        <div class="wrap">
+          <h2>How it works</h2>
+          <ol class="steps">
+            <li><b>Paint</b><span>Each control draws itself on a Canvas 2D scene graph. The DOM holds only a hidden accessibility outline: labels and states, no values.</span></li>
+            <li><b>Type</b><span>Keystrokes pass through one hidden input that's emptied after every event, then go into a wipeable <code>Uint32Array</code> buffer.</span></li>
+            <li><b>Validate</b><span>Shared rules check the value as the person types, the same rules your server will apply.</span></li>
+            <li><b>Seal</b><span>On submit, password bytes are encrypted for your server's public key, bound to a one-time challenge, and wiped from memory.</span></li>
+            <li><b>Verify</b><span>Your server decrypts with the bundled helper for your language, re-validates with the same rules and stores a peppered scrypt hash.</span></li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ============================================================ integrate -->
+      <section id="integrate" class="section alt">
+        <div class="wrap">
+          <h2>Drop it into any stack</h2>
+          <p class="section-lead">Describe the fields as data. PixiFormUI builds the controls, layout, validation and submission.</p>
+          <div class="code-tabs">
+            <div class="tabs" role="tablist" aria-label="Integration examples">
+              <button role="tab" id="t-html" aria-controls="c-html" aria-selected="true">HTML</button>
+              <button role="tab" id="t-react" aria-controls="c-react" aria-selected="false" tabindex="-1">React</button>
+              <button role="tab" id="t-angular" aria-controls="c-angular" aria-selected="false" tabindex="-1">Angular</button>
+              <button role="tab" id="t-mcp" aria-controls="c-mcp" aria-selected="false" tabindex="-1">MCP</button>
+            </div>
+            <pre role="tabpanel" id="c-html" aria-labelledby="t-html"><code>&lt;script type="module" src="/vendor/pixiformui.standalone.js"&gt;&lt;/script&gt;
+&lt;pixi-form id="signup"&gt;&lt;/pixi-form&gt;
+
+&lt;script type="module"&gt;
+  document.getElementById('signup').config = {
+    title: 'Create account',
+    theme: 'teal',
+    action: '/api/register',      // POST JSON, passwords encrypted
+    session: '/api/session',      // CSRF token + encryption key
+    fields: [
+      { type: 'group', title: 'Account', fields: [
+        { type: 'text', name: 'name', label: 'Name', required: true },
+        { type: 'email', name: 'email', label: 'Email', required: true },
+        { type: 'password', name: 'password', label: 'Password', required: true, strengthMeter: true },
+      ] },
+      { type: 'checkbox', name: 'terms', label: 'I accept the terms', required: true },
+    ],
+  };
+&lt;/script&gt;</code></pre>
+            <pre role="tabpanel" id="c-react" aria-labelledby="t-react" hidden><code>import { PixiForm } from './PixiForm';   // thin wrapper, StrictMode-safe
+
+export function Signup() {
+  return (
+    &lt;PixiForm
+      theme="indigo"
+      config={{
+        fields: [
+          { type: 'email', name: 'email', label: 'Email', required: true },
+          { type: 'phone', name: 'mobile', label: 'Mobile', defaultCountry: 'IN' },
+          { type: 'date', name: 'dob', label: 'Date of birth', max: 'today' },
+        ],
+        onSubmit: async (values, form) =&gt; {
+          const body = await form.serialize({ encryptionKey: session.encryption });
+          const res = await secureSubmit('/api/register', body, { csrfToken: session.csrfToken });
+          return res.json();   // { ok, message, fieldErrors }
+        },
+      }}
+    /&gt;
+  );
+}</code></pre>
+            <pre role="tabpanel" id="c-angular" aria-labelledby="t-angular" hidden><code>@Component({
+  imports: [PixiFormComponent],
+  template: `&lt;pixi-form [config]="config" [theme]="accent()" (success)="saved($event)" /&gt;`,
+})
+export class SignupComponent {
+  readonly accent = signal&lt;'indigo' | 'teal'&gt;('indigo');
+  readonly config: PixiFormConfig = {
+    fields: [{ type: 'otp', name: 'code', label: 'Verification code', length: 6 }],
+    action: '/api/verify',
+    session: '/api/session',
+  };
+}</code></pre>
+            <pre role="tabpanel" id="c-mcp" aria-labelledby="t-mcp" hidden><code>// claude_desktop_config.json, .mcp.json, Cursor…
+{
+  "mcpServers": {
+    "pixiform": {
+      "command": "node",
+      "args": ["--experimental-strip-types", "server/mcp.ts"],
+      "env": { "PIXIFORM_URL": "https://your-site.example" }
+    }
+  }
+}
+
+// The assistant calls start_registration({ fullName, email, country, … })
+// → returns https://your-site.example/#draft=…  (30 min, single use)
+// The person opens it, the form is prefilled, and THEY set the password.</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ faq -->
+      <section id="faq" class="section">
+        <div class="wrap faq">
+          <h2>Frequently asked questions</h2>
+            <details>
+              <summary>What is PixiFormUI?</summary>
+              <p>PixiFormUI is a JavaScript and TypeScript form library that draws every field on an HTML canvas. Typed values live in wipeable memory instead of the page DOM, so browser extensions, session-replay tools and injected scripts can't read them.</p>
+            </details>
+            <details>
+              <summary>How does it protect passwords?</summary>
+              <p>Password fields never become JavaScript strings. On submit they are encrypted in the browser for your server's public key (ECDH P-256, HKDF-SHA256 and AES-256-GCM), bound to a single-use challenge, then wiped from memory. Decryptors are included for Node.js, Python, Go, C#, Ruby, PHP and Java.</p>
+            </details>
+            <details>
+              <summary>Is a canvas form accessible?</summary>
+              <p>Yes. A hidden accessibility outline gives screen readers headings, labelled groups, roles, states and linked error messages, and the forms follow high contrast, forced colors, reduced motion and browser zoom.</p>
+            </details>
+            <details>
+              <summary>Does it work with React, Angular or plain HTML?</summary>
+              <p>Yes. Use the &lt;pixi-form&gt; web component in plain HTML, the provided React and Angular wrappers, or the framework-agnostic mountPixiForm() function in Vue, Svelte or anything else.</p>
+            </details>
+            <details>
+              <summary>How big is it, and what does it depend on?</summary>
+              <p>The complete standalone bundle is about 57 KB gzipped and has no runtime dependencies. It needs no WebGL, no workers and no unsafe-eval, so it runs under a strict Content Security Policy.</p>
+            </details>
+            <details>
+              <summary>Can AI assistants fill in the forms?</summary>
+              <p>Through the included MCP server, an assistant can validate and prefill a registration with non-secret details. The person then opens a single-use link and enters the password themselves, so secrets never pass through the AI.</p>
+            </details>
+        </div>
+      </section>
+
+      <!-- ============================================================ cta -->
+      <section class="section final">
+        <div class="wrap">
+          <h2>Build your first secure form</h2>
+          <p class="section-lead">The guide covers setup, every control, theming, the server, encryption, accessibility, analytics and MCP.</p>
+          <div class="cta center">
+            <a class="btn primary" href="/docs/guide/">Developer guide</a>
+            <a class="btn" href="/docs/encryption/">Encryption spec</a>
+          </div>
+        </div>
+      </section>
+      <!-- ============================================================ contact -->
+      <section id="contact" class="section alt">
+        <div class="wrap contact">
+          <div>
+            <h2>Get in touch</h2>
+            <p class="section-lead">Questions, integration help, or interested in using PixiFormUI in your product? Reach out by email or connect on LinkedIn.</p>
+          </div>
+          <div class="contact-actions">
+            <a class="btn primary" href="mailto:ravindra.suthar@me.com?subject=PixiFormUI">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              ravindra.suthar@me.com
+            </a>
+            <a class="btn" href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+              Connect on LinkedIn
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>© 2026 PixiFormUI</span>
+        <nav aria-label="Footer">
+          <a href="/docs/guide/">Guide</a>
+          <a href="/docs/encryption/">Encryption</a>
+          <a href="/docs/renderer/">Renderer</a>
+          <a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

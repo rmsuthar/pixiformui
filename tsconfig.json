@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src",
+    "shared",
+    "server",
+    "vite.config.ts",
+    "tests",
+    "scripts",
+    "site",
+    "vite.site.config.ts"
+  ]
+}

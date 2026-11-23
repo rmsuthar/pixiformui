@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Acme Bank: Existing page with an embedded PixiForm</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./page.css" />
+    <!-- 1. Load the standalone bundle (no dependencies). It registers <pixi-form>. -->
+    <script type="module" src="/dist-lib/pixiformui.standalone.js"></script>
+    <!-- 2. Configure it from your own script file (no inline scripts, so a strict CSP works). -->
+    <script type="module" src="./contact-form.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <strong>Acme Bank</strong>
+      <nav><a href="#">Accounts</a><a href="#">Cards</a><a href="#">Support</a></nav>
+    </header>
+
+    <main class="layout">
+      <article>
+        <h1>Update your contact details</h1>
+        <p>
+          This is an ordinary HTML page. The form on the right is a PixiForm web component: it is drawn on a
+          canvas, so what you type never appears in this page's DOM, where extensions or third-party scripts
+          could read it.
+        </p>
+        <p>
+          The component sizes itself to its content (<code>layout: 'auto'</code>), so the page scrolls normally,
+          including on phones.
+        </p>
+        <p class="status" id="status" role="status">Waiting for input…</p>
+        <p class="filler">Scroll down to see the page keeps scrolling normally around the form.</p>
+      </article>
+
+      <section class="panel" aria-label="Contact details form">
+        <!-- 3. Place the element anywhere. Its width comes from your CSS. -->
+        <pixi-form id="contact"></pixi-form>
+      </section>
+    </main>
+
+    <footer class="site-footer">© Acme Bank · Example page</footer>
+  </body>
+</html>

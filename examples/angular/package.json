@@ -1,0 +1,17 @@
+{
+  "name": "pixiform-angular-example",
+  "private": true,
+  "description": "Drop-in Angular component for PixiForm. Copy src/app/pixi-form.component.ts into your Angular app.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@angular/common": "22.3.0",
+    "@angular/core": "22.3.0",
+    "pixiformui": "file:../../dist-lib",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

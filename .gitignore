@@ -1,0 +1,20 @@
+node_modules
+dist
+.keys
+dist-lib
+examples/*/node_modules
+examples/*/dist
+dist-site
+.wrangler
+.DS_Store
+*.tgz
+.env
+.env.*
+.dev.vars
+coverage
+*.log
+# decryptor build output
+server/decrypt/csharp/bin
+server/decrypt/csharp/obj
+__pycache__
+*.class

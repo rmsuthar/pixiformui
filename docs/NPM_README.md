@@ -45,7 +45,7 @@ form.on('success', (e) => console.log(e.result.message));
 ### Plain HTML
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/npm/pixiformui@0.1.0/pixiformui.standalone.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/pixiformui@0.1.1/pixiformui.standalone.js"></script>
 <pixi-form id="contact"></pixi-form>
 <script type="module">
   document.getElementById('contact').config = {

@@ -4,7 +4,7 @@
 //      page per chapter (better titles, descriptions and URLs for search engines).
 //   3. sitemap.xml and robots.txt are generated.
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
@@ -257,6 +257,18 @@ const downloads = files.map((f) => {
   return { file: f, url: `/v/${version}/${f}`, sri: `sha384-${createHash('sha384').update(buf).digest('base64')}`, kb: Math.round(gzipSync(buf).length / 1024) };
 });
 const [standalone, esm] = downloads;
+// Earlier versions kept under site/public/v/<version>/ (copied into dist-site by Vite).
+const sriOf = (p) => `sha384-${createHash('sha384').update(readFileSync(p)).digest('base64')}`;
+const older = existsSync(join(out, 'v'))
+  ? readdirSync(join(out, 'v'))
+      .filter((v) => v !== version && existsSync(join(out, 'v', v, 'pixiformui.standalone.js')))
+      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+  : [];
+const olderHtml = older.length
+  ? `<h2 id="older">Older versions</h2>\n<table><thead><tr><th>Version</th><th>Standalone bundle (SHA-384)</th></tr></thead><tbody>${older
+      .map((v) => `<tr><td>${v}</td><td><a href="/v/${v}/pixiformui.standalone.js" download>pixiformui.standalone.js</a><br><code>${sriOf(join(out, 'v', v, 'pixiformui.standalone.js'))}</code></td></tr>`)
+      .join('')}</tbody></table>`
+  : '';
 const code = (s) => `<pre><code>${esc(s)}</code></pre>`;
 pages.push({
   url: '/docs/install/',
@@ -284,6 +296,7 @@ ${code(`<script type="module"\n  src="https://cdn.jsdelivr.net/npm/pixiformui@${
 <table><thead><tr><th>File</th><th>SHA-384 (Subresource Integrity)</th></tr></thead><tbody>
 ${downloads.map((d) => `<tr><td>${d.file}</td><td><code>${d.sri}</code></td></tr>`).join('')}
 </tbody></table>
+${olderHtml}
 <h2 id="source">Source code</h2>
 <p>The full source (library, reference server, decryptors for seven languages, MCP server, examples and docs) is on <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>. Issues and pull requests are welcome.</p>
 <h2 id="server">Server side</h2>
@@ -294,6 +307,7 @@ ${downloads.map((d) => `<tr><td>${d.file}</td><td><code>${d.sri}</code></td></tr
     { id: 'npm', text: 'npm' },
     { id: 'self-host', text: 'Self-hosted' },
     { id: 'cdn', text: 'CDN with integrity' },
+    ...(older.length ? [{ id: 'older', text: 'Older versions' }] : []),
     { id: 'source', text: 'Source code' },
     { id: 'server', text: 'Server side' },
     { id: 'licence', text: 'Licence and support' },

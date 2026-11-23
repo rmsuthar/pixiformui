@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Package metadata: GitHub repository and issue links, updated contact email. No code changes.
+
 ## 0.1.0 (first public release)
 
 - Canvas 2D renderer with zero dependencies; values never enter the DOM.

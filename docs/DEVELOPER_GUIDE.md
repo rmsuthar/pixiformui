@@ -1711,7 +1711,7 @@ origin so a strict `script-src 'self'` policy keeps working. Pin the version and
 
 ```html
 <script type="module" src="/vendor/pixiformui.standalone.js"></script>
-<!-- or: https://cdn.jsdelivr.net/npm/pixiformui@0.1.0/pixiformui.standalone.js -->
+<!-- or: https://cdn.jsdelivr.net/npm/pixiformui@0.1.1/pixiformui.standalone.js -->
 ```
 
 | File | Contents | For |

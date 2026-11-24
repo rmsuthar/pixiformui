@@ -333,6 +333,11 @@ ${olderHtml}
   crumbs: [{ name: 'Docs', url: '/docs/' }, { name: 'Install', url: '/docs/install/' }],
 });
 console.log(`install page + /v/${version}/ downloads`);
+// Header version badge on the Vite-built pages (home, 404).
+for (const f of ['index.html', '404.html']) {
+  const file = join(out, f);
+  writeFileSync(file, readFileSync(file, 'utf8').replaceAll('__PIXIFORM_VERSION__', version));
+}
 
 // ------------------------------------------------------------------ release notes (from CHANGELOG.md)
 const REPO = 'https://github.com/rmsuthar/pixiformui';
@@ -493,6 +498,7 @@ function layout(p) {
     <header class="nav">
       <div class="wrap nav-inner">
         <a class="brand" href="/" aria-label="PixiFormUI home"><img src="/favicon.svg" alt="" width="28" height="28" /><span>PixiForm<b>UI</b></span></a>
+        <a class="version" href="/releases/" title="Release notes" aria-label="Version ${version}: release notes">v${version}</a>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" hidden>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg>
         </button>

@@ -1,7 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mountElement } from './helpers';
 
+// mountElement() builds the config from a string with new Function(); Firefox applies the page CSP
+// to test scripts too, so these specs bypass it. Security, a11y and submit specs keep the real CSP.
+test.use({ bypassCSP: true });
+
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+// Real touch drags are sent through the Chrome DevTools protocol.
+test.skip(({ browserName }) => browserName !== 'chromium', 'touch drags use CDP (Chromium only)');
 
 /** A real touch drag (touchstart → touchmove… → touchend) via the DevTools protocol. */
 async function drag(page: Page, x: number, y: number, dx: number, dy: number): Promise<void> {

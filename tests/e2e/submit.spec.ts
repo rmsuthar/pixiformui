@@ -34,6 +34,9 @@ test('registration submits encrypted passwords to the server (201)', async ({ pa
     })(),
   ]);
   const body = JSON.parse(request.postData() ?? '{}');
+  // Regression guard: with referrerPolicy 'no-referrer', Safari and Firefox sent `Origin: null`
+  // and the server rejected the request (403).
+  expect(request.headers()['origin'] ?? 'not exposed').not.toBe('null');
   expect(response.status()).toBe(201);
   expect(body.password).toMatch(/^pfe1\./);
   expect(body.confirmPassword).toMatch(/^pfe1\./);

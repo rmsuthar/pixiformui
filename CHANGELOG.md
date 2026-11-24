@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Fix: submitting failed in Safari and Firefox (403).** `secureSubmit` used `referrerPolicy: 'no-referrer'`, which
+  makes Safari and Firefox send `Origin: null` on same-origin POSTs (per the Fetch spec), so servers checking the origin
+  rejected them. It now uses `'strict-origin'` (real Origin header; Referer is the origin only, never the path). The
+  reference server also accepts a null origin when the browser marks the request `Sec-Fetch-Site: same-origin`.
+- Browser tests now run in Chromium, WebKit (Safari) and Firefox; CI checks bundle size budgets.
+
 ## 0.1.3
 
 - Mobile: dragging inside an open dropdown now scrolls the list instead of the page, and swiping left/right on the

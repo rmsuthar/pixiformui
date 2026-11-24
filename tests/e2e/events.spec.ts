@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { focusField, mountElement } from './helpers';
 
+// mountElement() builds the config from a string with new Function(); Firefox applies the page CSP
+// to test scripts too, so these specs bypass it. Security, a11y and submit specs keep the real CSP.
+test.use({ bypassCSP: true });
+
 test('lifecycle and form events, cancelable beforesubmit, dirty state', async ({ page }) => {
   await page.addInitScript(() => {
     (window as any).__ev = [];

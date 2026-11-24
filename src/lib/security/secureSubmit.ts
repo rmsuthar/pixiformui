@@ -50,7 +50,10 @@ export async function secureSubmit(url: string, body: unknown, opts: SecureSubmi
       mode: sameOrigin ? 'same-origin' : 'cors',
       cache: 'no-store',
       redirect: 'error',
-      referrerPolicy: 'no-referrer',
+      // Not 'no-referrer': with it, Safari and Firefox send `Origin: null` on same-origin POSTs
+      // (per the Fetch spec), which servers rightly reject. 'strict-origin' sends the real Origin
+      // and a Referer of the origin only (never the page path).
+      referrerPolicy: 'strict-origin',
       signal: controller.signal,
     });
   } finally {

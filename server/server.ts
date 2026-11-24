@@ -320,6 +320,10 @@ function sameOrigin(req: IncomingMessage): boolean {
   const origin = req.headers.origin;
   const site = req.headers['sec-fetch-site'];
   if (site && site !== 'same-origin') return false;
+  // Pages with `Referrer-Policy: no-referrer` make Safari and Firefox send `Origin: null` on
+  // same-origin POSTs. Sec-Fetch-Site can't be forged by scripts, and cross-origin sources that
+  // send a null origin (sandboxed iframes, file://) are labelled 'cross-site', so this is safe.
+  if (origin === 'null' && site === 'same-origin') return true;
   if (!origin) return false;
   return origin === `http://${host}` || origin === `https://${host}`;
 }

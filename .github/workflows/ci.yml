@@ -28,9 +28,11 @@ jobs:
           npm run build
           npm run build:lib
           node scripts/build-site.mjs
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Browser tests
+      - name: Bundle size budget
+        run: npm run size
+      - name: Install Playwright browsers (Chromium, WebKit, Firefox)
+        run: npx playwright install --with-deps chromium webkit firefox
+      - name: Browser tests (Chromium, WebKit/Safari, Firefox)
         run: npm run test:e2e
       - name: Upload test report
         if: failure()

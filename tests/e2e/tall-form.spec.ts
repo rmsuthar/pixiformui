@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { mountElement } from './helpers';
 
+// mountElement() builds the config from a string with new Function(); Firefox applies the page CSP
+// to test scripts too, so these specs bypass it. Security, a11y and submit specs keep the real CSP.
+test.use({ bypassCSP: true });
+
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+// Firefox has no mobile emulation; WebKit (iPhone) and Chromium (Android) cover phones.
+test.skip(({ browserName }) => browserName === 'firefox', 'no mobile emulation in Firefox');
 
 test('a 200-field form stays within mobile canvas limits and works at the bottom', async ({ page }) => {
   const fields = `Array.from({ length: 200 }, (_, i) => ({ type: 'text', name: 'f' + i, label: 'Field ' + i })).concat([{ type: 'text', name: 'last', label: 'Last field' }])`;

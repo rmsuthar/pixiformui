@@ -1,0 +1,39 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Security issues:** please don't file them here; use
+        [private vulnerability reporting](https://github.com/rmsuthar/pixiformui/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: PixiFormUI version
+      placeholder: e.g. 0.1.3
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: e.g. Safari 18 on iPhone 15, Chrome 140 on Windows
+    validations:
+      required: true
+  - type: dropdown
+    id: integration
+    attributes:
+      label: How do you use it?
+      options: ['<pixi-form> web component', 'mountPixiForm()', 'React', 'Angular', 'Vue / other', 'Low-level API (FormUI, controls)']
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps or a minimal config to reproduce
+      render: js

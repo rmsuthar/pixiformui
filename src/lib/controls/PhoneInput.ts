@@ -18,6 +18,11 @@ export interface PhoneInputOptions extends ControlOptions<string> {
   /** Show flag emoji. Default: true except on Windows (no flag glyphs). */
   showFlags?: boolean;
   placeholder?: string;
+  /**
+   * Let the browser offer the saved phone number (autocomplete="tel"). A full international
+   * number like +44 7911 123456 picks the country automatically. Default false.
+   */
+  autocomplete?: boolean;
 }
 
 const IS_WINDOWS = /Win/.test(navigator.platform || navigator.userAgent);
@@ -99,6 +104,7 @@ export class PhoneInput extends Control<string> {
       label: opts.label ?? 'Phone number',
       placeholder: opts.placeholder ?? this.example(),
       inputMode: 'tel',
+      autocomplete: opts.autocomplete ? 'tel' : 'off',
       allow: /[0-9 +]/,
       maxLength: 22,
       validateOn: 'submit',

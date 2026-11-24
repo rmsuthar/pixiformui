@@ -40,7 +40,7 @@ export class OtpInput extends Control<string> {
   override readonly sensitive = true;
   override readonly inputMode = 'numeric' as const;
   override readonly enterKeyHint = 'done' as const;
-  readonly autocomplete = 'one-time-code' as const;
+  override readonly autocomplete = 'one-time-code' as const;
 
   readonly length: number;
   readonly groupSize: number;

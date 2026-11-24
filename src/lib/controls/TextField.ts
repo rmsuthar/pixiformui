@@ -1,7 +1,7 @@
 import { Container, Graphics, Rectangle, Text, type FederatedPointerEvent, type Ticker } from '../render/canvas';
 import { Control, type ControlOptions } from '../core/Control';
 import type { FormUI } from '../core/FormUI';
-import type { KeyboardTarget } from '../core/KeyboardProxy';
+import type { AutocompleteToken, KeyboardTarget } from '../core/KeyboardProxy';
 import { SecureBuffer, toCodePoints } from '../security/SecureBuffer';
 import { sanitizeInput } from '../security/sanitize';
 import type { TextInputFormatter } from '../security/formatters';
@@ -26,6 +26,12 @@ export interface TextFieldOptions<V> extends ControlOptions<V> {
   formatters?: TextInputFormatter[];
   /** Like Flutter's enableInteractiveSelection. False disables selection and copy/cut. */
   enableInteractiveSelection?: boolean;
+  /**
+   * Opt into browser autofill / password managers with a standard token, e.g. 'email', 'name',
+   * 'tel', 'street-address', 'username' (or 'username webauthn' for passkey suggestions).
+   * Default 'off'. Suggestions pass through the relay input exactly like typing and are cleared at once.
+   */
+  autocomplete?: AutocompleteToken;
 }
 
 interface Line {
@@ -55,6 +61,7 @@ export abstract class TextField<V> extends Control<V> {
   override readonly acceptsText = true;
   override readonly inputMode: KeyboardTarget['inputMode'];
   override readonly enterKeyHint: KeyboardTarget['enterKeyHint'];
+  override readonly autocomplete: AutocompleteToken;
 
   protected readonly buf = new SecureBuffer();
   protected caret = 0;
@@ -112,6 +119,7 @@ export abstract class TextField<V> extends Control<V> {
     this.formatters = [...(opts.formatters ?? [])];
     this.selectable = opts.enableInteractiveSelection ?? true;
     this.inputMode = opts.inputMode ?? 'text';
+    this.autocomplete = opts.autocomplete ?? 'off';
     this.enterKeyHint = opts.enterKeyHint ?? (this.multiline ? 'enter' : 'next');
 
     this.placeholderText = new Text({ text: '', style: this.textStyle('body') });
@@ -200,6 +208,13 @@ export abstract class TextField<V> extends Control<V> {
       'aria-readonly': this.readOnly ? 'true' : null,
       'aria-placeholder': this.placeholder || null,
     };
+  }
+
+  /** An autofill or password-manager suggestion replaces the whole value (through the usual formatters and checks). */
+  handleAutofill(text: string): void {
+    if (this.readOnly) return;
+    this.selectAll();
+    this.handleText(text);
   }
 
   override handleText(text: string): void {

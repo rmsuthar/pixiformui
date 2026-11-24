@@ -67,3 +67,15 @@ export {
   type PixiFormListeners,
   type LoadState,
 } from './events';
+export {
+  passkeysSupported,
+  passkeyAutofillAvailable,
+  createPasskey,
+  getPasskey,
+  passkeyErrorMessage,
+  type PasskeyCreationOptionsJSON,
+  type PasskeyRequestOptionsJSON,
+  type PasskeyRegistrationJSON,
+  type PasskeyAuthenticationJSON,
+} from './security/passkeys';
+export type { AutocompleteToken } from './core/KeyboardProxy';

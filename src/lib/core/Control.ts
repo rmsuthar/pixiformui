@@ -1,7 +1,7 @@
 import { Circle, Container, Graphics, Rectangle, Text, type FederatedPointerEvent, type TextStyleOptions } from '../render/canvas';
 import { createTheme, type DeepPartial, type Theme } from '../theme';
 import type { FormUI } from './FormUI';
-import type { KeyboardTarget } from './KeyboardProxy';
+import type { AutocompleteToken, KeyboardTarget } from './KeyboardProxy';
 import type { Focusable } from './types';
 
 export type ValidationResult = string | null | undefined;
@@ -64,6 +64,8 @@ export abstract class Control<V> extends Container implements Focusable {
   /** Short-lived credential (e.g. OTP): wiped by Form.wipeSecrets() like secrets. */
   readonly sensitive: boolean = false;
   readonly inputMode: KeyboardTarget['inputMode'] = 'none';
+  /** Autofill / password-manager token (opt-in per field; 'off' keeps them away). */
+  readonly autocomplete: AutocompleteToken = 'off';
   readonly enterKeyHint: KeyboardTarget['enterKeyHint'] = 'next';
 
   protected readonly body = new Container();
@@ -318,6 +320,10 @@ export abstract class Control<V> extends Container implements Focusable {
   wipe(): void {}
 
   // ---------------------------------------------------------------- KeyboardTarget
+  get autofillName(): string {
+    return this.fieldName;
+  }
+
   ariaRole(): string {
     return 'textbox';
   }

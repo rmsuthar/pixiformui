@@ -1,4 +1,48 @@
 /**
+ * Standard autocomplete tokens a field may opt into (browser autofill, password managers,
+ * passkey suggestions). Anything else is treated as 'off'.
+ */
+export type AutocompleteToken =
+  | 'off'
+  | 'one-time-code'
+  | 'name'
+  | 'given-name'
+  | 'family-name'
+  | 'nickname'
+  | 'email'
+  | 'username'
+  | 'username webauthn'
+  | 'current-password'
+  | 'new-password'
+  | 'tel'
+  | 'tel-national'
+  | 'organization'
+  | 'organization-title'
+  | 'street-address'
+  | 'address-line1'
+  | 'address-line2'
+  | 'address-level1'
+  | 'address-level2'
+  | 'postal-code'
+  | 'country-name'
+  | 'bday'
+  | 'url';
+
+const AUTOFILL_TOKENS = new Set<string>([
+  'name', 'given-name', 'family-name', 'nickname', 'email', 'username', 'username webauthn',
+  'current-password', 'new-password', 'tel', 'tel-national', 'organization', 'organization-title',
+  'street-address', 'address-line1', 'address-line2', 'address-level1', 'address-level2',
+  'postal-code', 'country-name', 'bday', 'url',
+]);
+/** Markers that tell password managers to leave the relay input alone (removed for opted-in fields). */
+const IGNORE_ATTRS: [string, string][] = [
+  ['data-lpignore', 'true'],
+  ['data-1p-ignore', 'true'],
+  ['data-bwignore', 'true'],
+  ['data-form-type', 'other'],
+];
+
+/**
  * What the focused control must implement to receive keyboard input.
  */
 export interface KeyboardTarget {
@@ -8,8 +52,15 @@ export interface KeyboardTarget {
   readonly secure: boolean;
   readonly inputMode: 'none' | 'text' | 'email' | 'tel' | 'numeric' | 'decimal' | 'url' | 'search';
   readonly enterKeyHint: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send';
-  /** Optional autocomplete token for the proxy, e.g. 'one-time-code' (SMS code autofill). Default 'off'. */
-  readonly autocomplete?: 'off' | 'one-time-code';
+  /**
+   * Autocomplete token for the relay input while this control is focused. 'off' (default) keeps
+   * autofill and password managers away; an opted-in token lets the browser offer suggestions.
+   */
+  readonly autocomplete?: AutocompleteToken;
+  /** Field name exposed to autofill heuristics (only for opted-in fields). */
+  readonly autofillName?: string;
+  /** Replaces the whole value with an autofill/password-manager suggestion. Defaults to handleText. */
+  handleAutofill?(text: string): void;
   ariaRole(): string;
   ariaLabel(): string;
   ariaState(): Record<string, string | null>;
@@ -46,6 +97,7 @@ export class KeyboardProxy {
   private suppressBlur = false;
   private static readonly SENTINEL = '​';
   private static seq = 0;
+  private autofill = false;
   private readonly helpEl: HTMLElement;
   private readonly errorEl: HTMLElement;
 
@@ -61,10 +113,7 @@ export class KeyboardProxy {
     el.setAttribute('autocorrect', 'off');
     el.setAttribute('autocapitalize', 'off');
     el.setAttribute('spellcheck', 'false');
-    el.setAttribute('data-lpignore', 'true');
-    el.setAttribute('data-1p-ignore', 'true');
-    el.setAttribute('data-bwignore', 'true');
-    el.setAttribute('data-form-type', 'other');
+    for (const [k, v] of IGNORE_ATTRS) el.setAttribute(k, v);
     el.setAttribute('aria-autocomplete', 'none');
     el.tabIndex = -1;
     const s = el.style;
@@ -99,6 +148,7 @@ export class KeyboardProxy {
 
     el.addEventListener('keydown', this.onKeyDown);
     el.addEventListener('input', this.onInput as EventListener);
+    el.addEventListener('change', this.onChange);
     el.addEventListener('compositionstart', this.onCompositionStart);
     el.addEventListener('compositionend', this.onCompositionEnd);
     el.addEventListener('paste', this.onPaste);
@@ -121,7 +171,20 @@ export class KeyboardProxy {
     el.inputMode = target.acceptsText ? target.inputMode : 'none';
     el.enterKeyHint = target.enterKeyHint;
     el.readOnly = !target.acceptsText;
-    el.setAttribute('autocomplete', target.autocomplete ?? 'off');
+    const token = target.autocomplete ?? 'off';
+    const autofill = AUTOFILL_TOKENS.has(token);
+    el.setAttribute('autocomplete', autofill || token === 'one-time-code' ? token : 'off');
+    // Opted-in fields: let the browser/password manager see a named field the size of the control,
+    // so suggestions appear and line up with it. Everyone else stays invisible to them.
+    this.autofill = autofill;
+    if (autofill) {
+      for (const [k] of IGNORE_ATTRS) el.removeAttribute(k);
+      el.name = (target.autofillName ?? '').slice(0, 64);
+    } else {
+      for (const [k, v] of IGNORE_ATTRS) el.setAttribute(k, v);
+      el.removeAttribute('name');
+    }
+    el.style.width = autofill && screenRect ? `${Math.max(1, Math.round(screenRect.width))}px` : '1px';
     this.syncAria();
     if (screenRect) this.position(screenRect);
     this.reset();
@@ -137,6 +200,10 @@ export class KeyboardProxy {
     this.reset();
     this.element.type = 'text';
     this.element.setAttribute('autocomplete', 'off');
+    for (const [k, v] of IGNORE_ATTRS) this.element.setAttribute(k, v);
+    this.element.removeAttribute('name');
+    this.element.style.width = '1px';
+    this.autofill = false;
     for (const a of ['aria-label', 'aria-describedby', 'aria-errormessage']) this.element.removeAttribute(a);
     this.helpEl.textContent = this.errorEl.textContent = '';
     if (document.activeElement === this.element) {
@@ -233,8 +300,21 @@ export class KeyboardProxy {
       t.handleText('\n');
       return;
     }
+    // Autofill and password managers replace the whole value (the zero-width placeholder is gone).
+    const replacing = type === 'insertReplacementText' || (this.autofill && !this.element.value.includes(KeyboardProxy.SENTINEL));
     const text = this.takeValue();
-    if (text) t.handleText(text);
+    if (!text) return;
+    if (replacing && t.handleAutofill) t.handleAutofill(text);
+    else t.handleText(text);
+  };
+
+  /** Some autofill implementations only fire 'change'. */
+  private onChange = (e: Event): void => {
+    if (!e.isTrusted || !this.autofill || !this.target?.acceptsText) return;
+    const raw = this.element.value;
+    if (!raw || raw === KeyboardProxy.SENTINEL) return;
+    const text = this.takeValue();
+    if (text) (this.target.handleAutofill ?? this.target.handleText).call(this.target, text);
   };
 
   private onCompositionStart = (e: CompositionEvent): void => {

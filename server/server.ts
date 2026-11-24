@@ -22,7 +22,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { OTP_LENGTH, otpRules, registrationRules, validatePartial, validatePayload } from '../shared/rules.ts';
+import { OTP_LENGTH, otpRules, registrationRules, validatePartial, validatePayload, validateValue } from '../shared/rules.ts';
+import { b64u, verifyAuthentication, verifyRegistration, type StoredCredential } from './webauthn.ts';
 import { REGISTRATION_DRAFT_RULES } from '../shared/agent.ts';
 import { loadKeyRing, openEnvelope } from './pfe.ts';
 
@@ -139,7 +140,16 @@ interface Session {
   /** Pending one-time code: only a keyed hash is stored, never the code. */
   otp?: { hash: Buffer; expires: number; attempts: number };
   verified?: boolean;
+  /** Pending passkey ceremony (single use). */
+  passkey?: { challenge: string; type: 'register' | 'login'; username?: string; userId?: string; expires: number };
+  /** Signed-in username (set by passkey sign-in or passkey registration). */
+  user?: string;
 }
+
+// ------------------------------------------------------------------ passkeys (demo store)
+const PASSKEY_TTL = 5 * 60_000;
+const passkeys = new Map<string, StoredCredential>(); // credential ID → credential
+const passkeyUsers = new Map<string, string>(); // username → WebAuthn user handle (random, base64url)
 
 // ------------------------------------------------------------------ one-time codes
 const OTP_TTL = 5 * 60_000;
@@ -201,7 +211,14 @@ interface Bucket {
 }
 const buckets = new Map<string, Bucket>();
 
+/**
+ * Test runs open the demo many times from one IP; RATE_LIMIT_SCALE (e.g. 50) raises every limit
+ * for that. It is ignored in production so it can't weaken a real deployment by accident.
+ */
+const RATE_SCALE = PROD ? 1 : Math.max(1, Math.min(1000, Number(process.env.RATE_LIMIT_SCALE ?? 1) || 1));
+
 function rateLimit(key: string, max: number, windowMs: number): { ok: boolean; retryAfter: number } {
+  max *= RATE_SCALE;
   const now = Date.now();
   let b = buckets.get(key);
   if (!b) {
@@ -439,6 +456,108 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     if (draft) drafts.delete(id as string); // single use
     if (!draft || draft.expires < Date.now()) return json(res, 404, { ok: false, message: 'This link has expired or was already used.' });
     return json(res, 200, { ok: true, values: draft.data });
+  }
+
+  // ---- passkeys (WebAuthn)
+  if (path.startsWith('/api/passkey/')) {
+    const current = guardStateChange(req, res);
+    if (!current) return;
+    // Issuing a challenge is cheap (and the demo asks for one on every load for passkey suggestions);
+    // verifying is what an attacker would hammer, so it gets the strict limit.
+    const isVerify = path.endsWith('/verify');
+    const limit = rateLimit(`passkey-${isVerify ? 'verify' : 'options'}:${ip}`, isVerify ? 20 : 60, 60_000);
+    if (!limit.ok) return json(res, 429, { ok: false, message: 'Too many attempts. Try again shortly.' }, { 'Retry-After': String(limit.retryAfter) });
+    let body: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(await readBody(req));
+      body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return json(res, 400, { ok: false, message: 'Malformed JSON.' });
+    }
+    const { session } = current;
+    const host = (req.headers.host ?? '').toLowerCase();
+    const rpId = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '');
+    const headerOrigin = req.headers.origin;
+    const origin = headerOrigin && headerOrigin !== 'null' ? headerOrigin : `${PROD && process.env.HTTPS === '1' ? 'https' : 'http'}://${host}`;
+    const newChallenge32 = () => b64u(randomBytes(32));
+    const takePending = (type: 'register' | 'login') => {
+      const p = session.passkey;
+      session.passkey = undefined; // single use, whatever the outcome
+      return p && p.type === type && p.expires > Date.now() ? p : null;
+    };
+
+    if (path === '/api/passkey/register/options') {
+      const username = typeof body.username === 'string' ? body.username.trim() : '';
+      const err = validateValue({ ...registrationRules.username, required: true }, username);
+      if (err) return json(res, 422, { ok: false, message: err, fieldErrors: { username: err } });
+      const takenByPassword = [...users.values()].some((u) => u.username === username);
+      const ownedHere = session.user === username;
+      if ((takenByPassword || passkeyUsers.has(username)) && !ownedHere) {
+        return json(res, 409, { ok: false, message: 'That username is taken. Sign in to add a passkey to it.', fieldErrors: { username: 'This username is taken.' } });
+      }
+      const userId = passkeyUsers.get(username) ?? b64u(randomBytes(16));
+      const challenge = newChallenge32();
+      session.passkey = { challenge, type: 'register', username, userId, expires: Date.now() + PASSKEY_TTL };
+      return json(res, 200, {
+        ok: true,
+        options: {
+          challenge,
+          rp: { id: rpId, name: 'PixiFormUI demo' },
+          user: { id: userId, name: username, displayName: username },
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },
+            { type: 'public-key', alg: -257 },
+          ],
+          timeout: PASSKEY_TTL,
+          attestation: 'none',
+          authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+          excludeCredentials: [...passkeys.values()].filter((c) => c.username === username).map((c) => ({ type: 'public-key', id: c.id, transports: c.transports })),
+        },
+      });
+    }
+
+    if (path === '/api/passkey/register/verify') {
+      const pending = takePending('register');
+      if (!pending?.username || !pending.userId) return json(res, 400, { ok: false, message: 'The passkey request expired. Please try again.' });
+      try {
+        const cred = verifyRegistration(body.credential, { challenge: pending.challenge, origin, rpId, requireUserVerification: true }, pending.username);
+        if (passkeys.has(cred.id)) return json(res, 409, { ok: false, message: 'This passkey is already registered.' });
+        passkeys.set(cred.id, cred);
+        passkeyUsers.set(pending.username, pending.userId);
+        session.user = pending.username;
+        console.log(`[passkey] registered for ${pending.username} (${passkeys.size} total)`);
+        return json(res, 201, { ok: true, message: `Passkey created. You're signed in as ${pending.username}.`, username: pending.username });
+      } catch (e) {
+        return json(res, 400, { ok: false, message: `Passkey could not be verified (${(e as Error).message}).` });
+      }
+    }
+
+    if (path === '/api/passkey/login/options') {
+      const username = typeof body.username === 'string' ? body.username.trim() : '';
+      const challenge = newChallenge32();
+      session.passkey = { challenge, type: 'login', username: username || undefined, expires: Date.now() + PASSKEY_TTL };
+      // Unknown usernames get an empty list too, so the response doesn't reveal which accounts exist.
+      const allow = username ? [...passkeys.values()].filter((c) => c.username === username).map((c) => ({ type: 'public-key', id: c.id, transports: c.transports })) : [];
+      return json(res, 200, { ok: true, options: { challenge, rpId, timeout: PASSKEY_TTL, userVerification: 'required', allowCredentials: allow } });
+    }
+
+    if (path === '/api/passkey/login/verify') {
+      const pending = takePending('login');
+      if (!pending) return json(res, 400, { ok: false, message: 'The sign-in request expired. Please try again.' });
+      const id = (body.credential as { id?: unknown } | undefined)?.id;
+      const stored = typeof id === 'string' ? passkeys.get(id) : undefined;
+      if (!stored || (pending.username && pending.username !== stored.username)) {
+        return json(res, 400, { ok: false, message: 'This passkey is not registered here.' });
+      }
+      try {
+        stored.signCount = verifyAuthentication(body.credential, stored, { challenge: pending.challenge, origin, rpId, requireUserVerification: true });
+        session.user = stored.username;
+        return json(res, 200, { ok: true, message: `Signed in as ${stored.username} with a passkey.`, username: stored.username });
+      } catch (e) {
+        return json(res, 400, { ok: false, message: `Passkey sign-in failed (${(e as Error).message}).` });
+      }
+    }
+    return json(res, 404, { ok: false, message: 'Not found.' });
   }
 
   if (path === '/api/register') {

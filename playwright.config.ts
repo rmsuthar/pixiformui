@@ -24,6 +24,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
+    // Many test pages from one IP: raise the server's rate limits (ignored in production).
+    env: { RATE_LIMIT_SCALE: '50' },
     url: 'http://localhost:8787/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

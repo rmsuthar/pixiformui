@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Autofill and password managers (opt-in):** fields accept a standard `autocomplete` token (`email`, `name`,
+  `tel`, `current-password`, `new-password`, `username webauthn`…); the phone input takes `autocomplete: true`.
+  Suggestions replace the value through the usual sanitising and are cleared from the relay input at once. Fields
+  without a token are unchanged.
+- **Passkeys (WebAuthn):** `createPasskey()`, `getPasskey()` (including passkey suggestions in a username field via
+  conditional mediation), `passkeysSupported()`, `passkeyAutofillAvailable()` and `passkeyErrorMessage()`. The
+  reference server verifies registrations and sign-ins with Node's crypto (`server/webauthn.ts`), and the demo has a
+  Passkeys card.
+
 ## 0.1.4
 
 - **Fix: submitting failed in Safari and Firefox (403).** `secureSubmit` used `referrerPolicy: 'no-referrer'`, which

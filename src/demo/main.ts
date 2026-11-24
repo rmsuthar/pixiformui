@@ -36,6 +36,12 @@ import {
   type Layoutable,
   type Secret,
   type SubmitResult,
+  createPasskey,
+  getPasskey,
+  passkeyAutofillAvailable,
+  passkeyErrorMessage,
+  passkeysSupported,
+  type PasskeyAuthenticationJSON,
 } from '../lib';
 import { Formatters } from '../lib/security/formatters';
 import { COUNTRIES, COUNTRY_NAMES, OTP_LENGTH, otpRules, registrationRules as R } from '../../shared/rules.ts';
@@ -344,7 +350,97 @@ async function main(): Promise<void> {
       20,
     ),
   );
-  const page = new Page(new Column([card, otpCard], 24));
+  // ------------------------------------------------------------ passkeys (WebAuthn)
+  const pkUser = new TextInput(ui, {
+    name: 'passkeyUsername',
+    label: 'Passkey username',
+    placeholder: 'e.g. ada_passkey',
+    formatters: [Formatters.lowerCase()],
+    allow: /[a-z0-9_]/,
+    maxLength: 24,
+    // Lets the browser offer saved passkeys in this field's suggestions.
+    autocomplete: 'username webauthn',
+    helperText: 'Choose one to create a passwordless account, or leave empty to sign in.',
+    info: 'Passkeys use your device lock (Face ID, fingerprint or PIN) instead of a password. Nothing secret leaves your device.',
+  });
+  const createPk = new Button(ui, { name: 'createPasskey', text: 'Create a passkey' });
+  const signInPk = new Button(ui, { name: 'signInPasskey', text: 'Sign in with a passkey', variant: 'outline' });
+  let conditional: AbortController | null = null;
+  const finishSignIn = async (credential: PasskeyAuthenticationJSON) => {
+    const r = await postJson('/api/passkey/login/verify', { credential });
+    toast.show(r.body.message ?? (r.res.ok ? 'Signed in.' : 'Sign-in failed.'), r.res.ok ? 'success' : 'error', 6000);
+  };
+  // Passkey suggestions in the username field (where the browser supports them).
+  const startConditional = async () => {
+    if (!(await passkeyAutofillAvailable())) return;
+    conditional?.abort();
+    const ac = (conditional = new AbortController());
+    try {
+      const { res, body } = await postJson('/api/passkey/login/options', {});
+      if (!res.ok || ac.signal.aborted) return;
+      await finishSignIn(await getPasskey((body as any).options, { mediation: 'conditional', signal: ac.signal }));
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') toast.show(passkeyErrorMessage(e), 'error');
+    }
+  };
+  createPk.onPress = async () => {
+    conditional?.abort();
+    const username = pkUser.getValue().trim();
+    if (!username) {
+      pkUser.setError('Choose a username to create a passkey.');
+      pkUser.focus();
+      return;
+    }
+    try {
+      const { res, body } = await postJson('/api/passkey/register/options', { username });
+      if (!res.ok) {
+        if (body.fieldErrors?.username) pkUser.setError(body.fieldErrors.username, 'server');
+        toast.show(body.message ?? 'Could not start passkey registration.', 'error');
+        return;
+      }
+      const credential = await createPasskey((body as any).options);
+      const r = await postJson('/api/passkey/register/verify', { credential });
+      toast.show(r.body.message ?? (r.res.ok ? 'Passkey created.' : 'Passkey could not be saved.'), r.res.ok ? 'success' : 'error', 6000);
+    } catch (e) {
+      toast.show(passkeyErrorMessage(e), 'error');
+    } finally {
+      void startConditional();
+    }
+  };
+  signInPk.onPress = async () => {
+    conditional?.abort();
+    try {
+      const { res, body } = await postJson('/api/passkey/login/options', { username: pkUser.getValue().trim() });
+      if (!res.ok) return void toast.show(body.message ?? 'Could not start sign-in.', 'error');
+      await finishSignIn(await getPasskey((body as any).options));
+    } catch (e) {
+      toast.show(passkeyErrorMessage(e), 'error');
+    } finally {
+      void startConditional();
+    }
+  };
+  if (!passkeysSupported()) {
+    createPk.enabled = false;
+    signInPk.enabled = false;
+  } else void startConditional();
+  const passkeyCard = new Card(
+    ui,
+    new Column(
+      [
+        new Label(ui, 'Passkeys', 'title'),
+        new Label(
+          ui,
+          passkeysSupported() ? 'Sign in with Face ID, fingerprint or your device PIN. No password to type or leak.' : 'This browser does not support passkeys.',
+          'subtitle',
+        ),
+        pkUser,
+        new Row([createPk, signInPk], 12, 0),
+      ],
+      20,
+    ),
+  );
+
+  const page = new Page(new Column([card, otpCard, passkeyCard], 24));
   const scroll = new ScrollView(ui, page);
   const applyTheme = () => {
     theme = presetTheme(accent, mode);

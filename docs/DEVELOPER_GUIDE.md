@@ -37,6 +37,7 @@ reference server. This guide covers everything you need to build, style, extend,
 24. [Analytics](#24-analytics)
 25. [Serialization, AJAX and MCP](#25-serialization-ajax-and-mcp)
 26. [Events and loading](#26-events-and-loading)
+27. [Autofill and passkeys](#27-autofill-and-passkeys)
 
 ---
 
@@ -2196,4 +2197,74 @@ handle.on('beforesubmit', (e) => {
 **Error isolation:** a listener that throws doesn't stop other listeners or the matching DOM event. It's reported as
 an `error` event with `phase: 'listener'`. The Angular wrapper exposes `(loaded)` and a catch-all
 `(formEvent)` output (`{ type, detail }`).
+
+---
+
+## 27. Autofill and passkeys
+
+### 27.1 Browser autofill and password managers (opt-in)
+
+By default, autofill and password managers are kept away from PixiFormUI fields. A field can opt in with a standard
+`autocomplete` token:
+
+```ts
+{ type: 'text', name: 'name', label: 'Full name', autocomplete: 'name' },
+{ type: 'email', name: 'email', label: 'Email', autocomplete: 'email' },
+{ type: 'phone', name: 'mobile', label: 'Mobile', autocomplete: true },          // offers the saved number
+{ type: 'password', name: 'password', label: 'Password', autocomplete: 'current-password' }, // or 'new-password'
+```
+
+While an opted-in field has focus, the hidden relay input carries that token and the field's name, without the
+"password managers: ignore" markers, and takes the field's width so suggestions line up with it. A chosen suggestion
+**replaces** the field's value through the usual sanitiser, length limit and formatters. The relay input is then cleared
+in the same event, exactly as with typing. Fields without a token behave as before.
+
+Supported tokens: `name`, `given-name`, `family-name`, `nickname`, `email`, `username`, `username webauthn`,
+`current-password`, `new-password`, `tel`, `tel-national`, `organization`, `organization-title`, `street-address`,
+`address-line1`, `address-line2`, `address-level1`, `address-level2`, `postal-code`, `country-name`, `bday`, `url`.
+
+**Trade-off:** autofill means the browser or password manager writes the value into the page for an instant, just like
+a keystroke. For password fields that's usually worth it: password managers encourage long, unique passwords.
+Autofill works one field at a time, because only the focused field is a real input. Password managers' "save
+password" prompts depend on detecting a classic form submission and may not appear.
+
+### 27.2 Passkeys (WebAuthn)
+
+Passkeys replace passwords with the device's own lock (Face ID, fingerprint or PIN). Nothing secret is typed, and
+nothing reusable is sent to your server. The library provides dependency-free helpers that convert between your
+server's JSON and the browser API:
+
+```ts
+import { createPasskey, getPasskey, passkeysSupported, passkeyAutofillAvailable, passkeyErrorMessage, secureSubmit } from 'pixiformui';
+
+// Create (registration)
+const { options } = await (await secureSubmit('/api/passkey/register/options', { username })).json();
+const credential = await createPasskey(options);
+await secureSubmit('/api/passkey/register/verify', { credential });
+
+// Sign in
+const { options } = await (await secureSubmit('/api/passkey/login/options', {})).json();
+const credential = await getPasskey(options);
+await secureSubmit('/api/passkey/login/verify', { credential });
+```
+
+**Passkey suggestions in a username field:** give the field `autocomplete: 'username webauthn'`, and when the page
+loads (if `await passkeyAutofillAvailable()`), start `getPasskey(options, { mediation: 'conditional', signal })`. The
+browser then lists saved passkeys in that field's suggestions. Abort that request (`signal`) before starting a button-
+triggered one. `passkeyErrorMessage(err)` turns WebAuthn errors (cancelled, timed out, already registered) into short
+messages.
+
+**The server must verify everything.** The reference server's [server/webauthn.ts](../server/webauthn.ts) does this
+with Node's crypto only:
+- the `clientDataJSON` type, single-use challenge and origin;
+- the relying-party ID hash, plus user-presence and user-verification flags;
+- the signature over `authenticatorData ‖ SHA-256(clientDataJSON)`, for ES256 and RS256 keys;
+- signature counters that go backwards are rejected, a sign of a cloned authenticator.
+
+Its endpoints, `/api/passkey/register/options|verify` and `/api/passkey/login/options|verify`, require the session's
+CSRF token. A passkey can only be created for a new username or one the current session already owns, so nobody can
+attach their passkey to someone else's account. In production, use a maintained WebAuthn library (for example
+SimpleWebAuthn for Node, py_webauthn, webauthn4j or go-webauthn) and store credentials in your database.
+
+Passkeys need a secure context: HTTPS, or `http://localhost` in development. The relying-party ID is your domain.
 

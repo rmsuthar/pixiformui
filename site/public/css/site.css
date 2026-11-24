@@ -1021,3 +1021,42 @@ h1 {
     border-radius: 10px;
   }
 }
+
+/* ---------------------------------------------------------------- release notes */
+.release + .release {
+  margin-top: 8px;
+}
+.release h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.release h2 small {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.badge.latest {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.badge.pending {
+  background: var(--bg-alt);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.release-meta {
+  color: var(--muted);
+  font-size: 14px;
+  margin: -4px 0 12px;
+}

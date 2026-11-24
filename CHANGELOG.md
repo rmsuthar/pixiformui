@@ -6,6 +6,10 @@
   of any length stay within mobile canvas limits (iOS Safari) and memory stays flat. Off-screen controls are skipped
   when drawing.
 - Toasts appear in the visible part of the form; the keyboard relay input is anchored to the canvas.
+- `<pixi-form>` element methods: `values()`, `setValues()`, `get(name)`, `submit()` and `reset()`, so plain-HTML pages
+  can read and fill the form without the handle. Secret fields are never set by `setValues()`.
+- Project: browser test suite (Playwright) and CI on every push, `SECURITY.md` with private vulnerability reporting,
+  and a release workflow that publishes to npm with provenance.
 
 ## 0.1.1
 

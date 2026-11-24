@@ -257,9 +257,15 @@ for (const f of files) {
 // …but advertise the latest version that's actually on npm, so CDN links never 404
 // between a version bump and `npm publish`.
 let published = null;
+/** version → publish time on npm (for release notes). */
+let npmTimes = {};
 try {
-  const r = await fetch('https://registry.npmjs.org/pixiformui/latest', { signal: AbortSignal.timeout(8000) });
-  if (r.ok) published = (await r.json()).version;
+  const r = await fetch('https://registry.npmjs.org/pixiformui', { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+  if (r.ok) {
+    const doc = await r.json();
+    published = doc['dist-tags']?.latest ?? null;
+    npmTimes = doc.time ?? {};
+  }
 } catch {}
 const version = published && published !== lib.version && existsSync(join(out, 'v', published, files[0])) ? published : lib.version;
 if (version !== lib.version) console.log(`install page: npm latest is ${version} (built ${lib.version} not published yet)`);
@@ -287,7 +293,7 @@ pages.push({
   nav: 'Install',
   description: `Install PixiFormUI ${version} from npm, load it from a CDN, or self-host the bundle with Subresource Integrity hashes. MIT licensed.`,
   html: `<h1>Install</h1>
-<p>Current version: <strong>${version}</strong> · MIT licence · zero dependencies.</p>
+<p>Current version: <strong>${version}</strong> · MIT licence · zero dependencies · <a href="/releases/">Release notes</a></p>
 <h2 id="npm">npm (React, Angular, Vue, Svelte, any bundler)</h2>
 ${code('npm install pixiformui')}
 ${code(`import { mountPixiForm } from 'pixiformui';\n\nconst form = await mountPixiForm(document.getElementById('signup'), {\n  fields: [{ type: 'email', name: 'email', label: 'Email', required: true }],\n  onSubmit: async (values) => ({ ok: true, message: 'Saved' }),\n});`)}
@@ -328,6 +334,56 @@ ${olderHtml}
 });
 console.log(`install page + /v/${version}/ downloads`);
 
+// ------------------------------------------------------------------ release notes (from CHANGELOG.md)
+const REPO = 'https://github.com/rmsuthar/pixiformui';
+const releases = (() => {
+  const marked = new Marked({ gfm: true });
+  const tokens = marked.lexer(readFileSync(join(root, 'CHANGELOG.md'), 'utf8'));
+  const list = [];
+  for (const t of tokens) {
+    if (t.type === 'heading' && t.depth === 2) {
+      const m = t.text.match(/^(\d+\.\d+\.\d+)\s*(?:\((.*)\))?/);
+      list.push({ version: m ? m[1] : t.text.trim(), note: m?.[2] ?? '', tokens: [] });
+    } else if (list.length) list[list.length - 1].tokens.push(t);
+  }
+  return list.map((r) => {
+    const body = Object.assign([...r.tokens], { links: tokens.links });
+    const html = marked.parser(body);
+    const date = npmTimes[r.version] ? new Date(npmTimes[r.version]) : null;
+    return { ...r, html, date, onNpm: !!date, id: `v${r.version}` };
+  });
+})();
+const fmtDate = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+pages.push({
+  url: '/releases/',
+  title: 'PixiFormUI release notes and changelog',
+  nav: 'Release notes',
+  description: `What's new in each version of PixiFormUI, the secure canvas form library. Latest: ${published ?? releases[0]?.version}. Subscribe with the Atom feed.`,
+  html: `<h1>Release notes</h1>
+<p>What changed in each version. Subscribe with the <a href="/releases/feed.xml">Atom feed</a>, or watch releases on <a href="${REPO}/releases" rel="noopener noreferrer">GitHub</a>.</p>
+${releases
+  .map((r) => {
+    const badges = [
+      r.version === published ? '<span class="badge latest">Latest</span>' : '',
+      /^\d/.test(r.version) && !r.onNpm ? '<span class="badge pending">Not yet on npm</span>' : '',
+    ].join('');
+    const meta = /^\d/.test(r.version)
+      ? `<p class="release-meta">${r.date ? `<time datetime="${r.date.toISOString()}">${fmtDate(r.date)}</time> · ` : ''}${
+          r.onNpm ? `<a href="https://www.npmjs.com/package/pixiformui/v/${r.version}" rel="noopener noreferrer">npm</a> · ` : ''
+        }<a href="${REPO}/tree/v${r.version}" rel="noopener noreferrer">Source (v${r.version})</a>${r.onNpm ? ` · <code>npm install pixiformui@${r.version}</code>` : ''}</p>`
+      : '';
+    return `<section class="release" aria-labelledby="${r.id}">
+<h2 id="${r.id}">${esc(r.version)}${r.note ? ` <small>${esc(r.note)}</small>` : ''}${badges}</h2>
+${meta}
+${r.html}
+</section>`;
+  })
+  .join('\n')}`,
+  toc: releases.map((r) => ({ id: r.id, text: r.version })),
+  kind: 'article',
+  crumbs: [{ name: 'Release notes', url: '/releases/' }],
+});
+
 pages.push({
   url: '/docs/',
   title: 'PixiFormUI documentation',
@@ -349,6 +405,7 @@ pages.push({
 function sidebar(current) {
   const top = [
     ['/docs/install/', 'Install'],
+    ['/releases/', 'Release notes'],
     ['/docs/guide/', 'Developer guide'],
     ['/docs/encryption/', 'Encryption (PFE1)'],
     ['/docs/renderer/', 'Renderer'],
@@ -426,6 +483,7 @@ function layout(p) {
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="alternate" type="application/atom+xml" title="PixiFormUI releases" href="/releases/feed.xml" />
     <link rel="stylesheet" href="/css/site.css" />
     <script src="/js/menu.js" defer></script>
     ${jsonLd(p)}${p.url === '/docs/guide/' ? '\n    <script src="/js/guide-anchors.js" defer></script>' : ''}
@@ -458,7 +516,7 @@ ${p.html}
         ${pager}
       </main>
     </div>
-    <footer class="footer"><div class="wrap footer-inner"><span>© 2026 PixiFormUI</span><nav aria-label="Footer"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/#demo">Demo</a><a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a></nav></div></footer>
+    <footer class="footer"><div class="wrap footer-inner"><span>© 2026 PixiFormUI</span><nav aria-label="Footer"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/#demo">Demo</a><a href="/releases/">Releases</a><a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a></nav></div></footer>
   </body>
 </html>
 `;
@@ -470,6 +528,38 @@ for (const p of pages) {
   writeFileSync(join(dir, 'index.html'), layout(p));
 }
 console.log(`docs: ${pages.length} pages (${chapters.length} guide chapters)`);
+
+// Atom feed of releases (published versions only, newest first).
+const feedEntries = releases.filter((r) => r.onNpm);
+const updated = (feedEntries[0]?.date ?? new Date()).toISOString();
+writeFileSync(
+  join(out, 'releases', 'feed.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>PixiFormUI releases</title>
+  <subtitle>Release notes for PixiFormUI, the secure canvas form library.</subtitle>
+  <link href="${SITE}/releases/feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="${SITE}/releases/" rel="alternate" type="text/html"/>
+  <id>${SITE}/releases/</id>
+  <updated>${updated}</updated>
+  <author><name>Ravindrakumar Suthar</name></author>
+  <icon>${SITE}/favicon.svg</icon>
+${feedEntries
+  .map(
+    (r) => `  <entry>
+    <title>PixiFormUI ${esc(r.version)}</title>
+    <link href="${SITE}/releases/#${r.id}" rel="alternate" type="text/html"/>
+    <id>${SITE}/releases/#${r.id}</id>
+    <updated>${r.date.toISOString()}</updated>
+    <published>${r.date.toISOString()}</published>
+    <content type="html">${esc(r.html)}</content>
+  </entry>`,
+  )
+  .join('\n')}
+</feed>
+`,
+);
+console.log(`releases: ${releases.length} versions (${feedEntries.length} in feed)`);
 
 // Old single-page links like /docs/guide/#18-accessibility → the chapter page that now holds that anchor.
 const moved = {};

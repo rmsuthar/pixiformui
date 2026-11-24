@@ -139,6 +139,8 @@ export class Container extends EventEmitter {
   cursor: string | undefined;
   hitArea: { contains(x: number, y: number): boolean } | null = null;
   renderable = true;
+  /** Local rectangle that bounds everything this node draws; off-screen nodes (and children) are skipped. */
+  cullArea: Rectangle | null = null;
   destroyed = false;
   readonly position = new ObservablePoint(this);
   private _visible = true;
@@ -896,6 +898,8 @@ export class Application {
     if (!n.visible || !n.renderable || n._isMask || n.alpha <= 0) return;
     const x = ox + n.position.x;
     const y = oy + n.position.y;
+    const c = n.cullArea;
+    if (c && (x + c.x > this.screen.width || y + c.y > this.screen.height || x + c.x + c.width < 0 || y + c.y + c.height < 0)) return;
     const a = alpha * n.alpha;
     const ctx = this.ctx;
     const mask = n.mask;

@@ -1,4 +1,4 @@
-import { Circle, Container, Graphics, Text, type FederatedPointerEvent, type TextStyleOptions } from '../render/canvas';
+import { Circle, Container, Graphics, Rectangle, Text, type FederatedPointerEvent, type TextStyleOptions } from '../render/canvas';
 import { createTheme, type DeepPartial, type Theme } from '../theme';
 import type { FormUI } from './FormUI';
 import type { KeyboardTarget } from './KeyboardProxy';
@@ -399,6 +399,8 @@ export abstract class Control<V> extends Container implements Focusable {
     this.messageText.y = hh + this.bodyHeight() + t.helperGap;
 
     const h = this.layoutHeight;
+    // Everything a control draws (focus ring, thumbs, shake) stays within 12px of its box.
+    this.cullArea = new Rectangle(-12, -12, this._width + 24, h + 24);
     if (h !== this.lastHeight) {
       this.lastHeight = h;
       this.emit('resize', this);

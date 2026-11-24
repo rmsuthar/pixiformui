@@ -8,21 +8,22 @@
 
 ## Every release
 
+Releases are published by GitHub Actions ([.github/workflows/release.yml](../.github/workflows/release.yml)) with
+**npm provenance**: the npm page shows that the package was built from this repository, and no npm token is stored
+anywhere.
+
+**One-time setup:** on npmjs.com open `pixiformui` → **Settings** → **Trusted publishing** → **GitHub Actions**, and
+enter owner `rmsuthar`, repository `pixiformui`, workflow `release.yml`.
+
 ```bash
-# 1. Bump the version (root package.json drives the package, the site and the /v/<version>/ downloads)
+# 1. Bump the version and update CHANGELOG.md (add a "## X.Y.Z" section)
 npm version patch --no-git-tag-version      # or minor / major
-# 2. Update CHANGELOG.md
-# 3. Check everything
-npm run typecheck && npm test
-# 4. Build the package and look at what will be published
-npm run build:lib
-cd dist-lib && npm pack --dry-run && cd ..
-# 5. Publish (asks for your 2FA code)
-cd dist-lib && npm publish && cd ..
-# 6. Publish the website (install page shows the new version + integrity hashes)
-npm run deploy:site
-# 7. Tag the release
+# 2. Check everything locally
+npm run typecheck && npm test && npm run test:e2e
+# 3. Commit, tag and push: the Release workflow publishes to npm and creates the GitHub release
 git commit -am "Release vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags
+# 4. Publish the website (the install page switches to the new version once it's on npm)
+npm run deploy:site
 ```
 
 After publishing, jsDelivr and unpkg serve the package automatically:

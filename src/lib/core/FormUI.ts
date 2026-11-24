@@ -74,7 +74,7 @@ export class FormUI extends Container {
       onBlur: () => this.focus.blur(),
       onKeyDown: (e) => this.handleGlobalKey(e) || this.focus.handleKeyDown(e),
       onTrustedInteraction: (e) => this.notifyInteraction(e),
-    });
+    }, () => app.canvas.getBoundingClientRect());
     this.announcer = new Announcer(this.host);
 
     // Keep the proxy focused when the canvas is clicked.
@@ -229,6 +229,19 @@ export class FormUI extends Container {
   notifyInteraction(e: Event): void {
     if (!e.isTrusted) return;
     for (const fn of this.interactionListeners) fn(e);
+  }
+
+  /**
+   * The part of the canvas currently visible in the browser window, in canvas coordinates.
+   * Overlays (toasts) use it so they appear on screen even when the canvas is taller than the window.
+   */
+  visibleRect(): { x: number; y: number; width: number; height: number } {
+    const { width, height } = this.app.screen;
+    if (typeof window === 'undefined') return { x: 0, y: 0, width, height };
+    const r = this.app.canvas.getBoundingClientRect();
+    const top = Math.max(0, -r.top);
+    const bottom = Math.min(height, window.innerHeight - r.top);
+    return bottom > top ? { x: 0, y: top, width, height: bottom - top } : { x: 0, y: 0, width, height };
   }
 
   /** Re-anchors the hidden proxy at a control (e.g. after scrolling). */

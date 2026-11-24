@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Tall forms in `layout: 'auto'`: the canvas stays at most about two screens tall and follows the page scroll, so forms
+  of any length stay within mobile canvas limits (iOS Safari) and memory stays flat. Off-screen controls are skipped
+  when drawing.
+- Toasts appear in the visible part of the form; the keyboard relay input is anchored to the canvas.
+
 ## 0.1.1
 
 - Package metadata: GitHub repository and issue links, updated contact email. No code changes.

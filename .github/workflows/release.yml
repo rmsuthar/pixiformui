@@ -1,0 +1,49 @@
+name: Release
+
+# Push a tag like v0.1.2 (matching package.json) to publish to npm with provenance.
+# Uses npm trusted publishing (OIDC): no npm token is stored in GitHub. One-time setup on
+# npmjs.com → pixiformui → Settings → Trusted publishing → GitHub Actions:
+#   owner rmsuthar, repository pixiformui, workflow release.yml
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # create the GitHub release
+  id-token: write # npm trusted publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Use an npm that supports trusted publishing
+        run: npm install -g npm@11.21.2
+      - run: npm ci
+      - name: Check the tag matches package.json
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json ($VERSION)"; exit 1
+          fi
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build the package
+        run: npm run build:lib
+      - name: Publish to npm (with provenance)
+        working-directory: dist-lib
+        run: npm publish --provenance --access public
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="## $VERSION" '$0 ~ "^## " { if (found) exit; if (index($0, v) == 1) { found = 1; next } } found' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Release $GITHUB_REF_NAME" > notes.md
+          gh release create "$GITHUB_REF_NAME" --title "PixiFormUI $GITHUB_REF_NAME" --notes-file notes.md

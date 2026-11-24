@@ -181,7 +181,8 @@ export class Toast extends Container {
     this.bg.clear().roundRect(0, 4, w, h, 12).fill({ color: c.shadow, alpha: 0.2 }).roundRect(0, 0, w, h, 12).fill(c.inverseSurface);
     this.bg.circle(22, h / 2, 5).fill(accent);
     this.txt.position.set(40, (h - this.txt.height) / 2);
-    this.position.set(Math.round((screen.width - w) / 2), screen.height - h - 24);
+    const vis = this.ui.visibleRect();
+    this.position.set(Math.round((screen.width - w) / 2), Math.round(vis.y + vis.height - h - 24));
     this.ui.overlay.addChild(this); // bring to front
     this.alphaTarget = 1;
     window.clearTimeout(this.timer);

@@ -1781,7 +1781,7 @@ Fields with the same `row` key sit side by side and stack below 520 px.
 
 | Config | Default | Notes |
 | --- | --- | --- |
-| `layout` | `'auto'` | `'auto'`: the canvas height follows the form and the page scrolls natively (`touch-action: pan-y`). `'fill'`: the canvas fills the host and scrolls internally, so give the host a height. |
+| `layout` | `'auto'` | `'auto'`: the host takes the form's height and the page scrolls natively (`touch-action: pan-y`). Forms taller than about two screens use a canvas "window" that follows the page scroll, so any length stays within mobile canvas limits. `'fill'`: the canvas fills the host and scrolls internally, so give the host a height. |
 | `transparent` | `true` in `auto` | The page background shows through around the card. |
 | `card` | `true` | Rounded surface behind the form. |
 | `privacyScreen` | `true` | Covers the form when the window loses focus. |

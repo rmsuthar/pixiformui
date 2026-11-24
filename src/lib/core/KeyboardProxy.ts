@@ -49,7 +49,12 @@ export class KeyboardProxy {
   private readonly helpEl: HTMLElement;
   private readonly errorEl: HTMLElement;
 
-  constructor(private readonly host: HTMLElement, private readonly hooks: KeyboardProxyHooks) {
+  constructor(
+    host: HTMLElement,
+    private readonly hooks: KeyboardProxyHooks,
+    /** Element whose top-left is the origin of control coordinates (the canvas). Defaults to the host. */
+    private readonly origin: () => DOMRect = () => host.getBoundingClientRect(),
+  ) {
     const el = document.createElement('input');
     el.type = 'text';
     el.setAttribute('autocomplete', 'off');
@@ -164,9 +169,9 @@ export class KeyboardProxy {
 
   /** Keeps the IME candidate window / mobile scroll anchored at the control. */
   position(rect: { x: number; y: number; width: number; height: number }): void {
-    const host = this.host.getBoundingClientRect();
-    this.element.style.left = `${Math.round(host.left + rect.x)}px`;
-    this.element.style.top = `${Math.round(host.top + rect.y + rect.height - 1)}px`;
+    const o = this.origin();
+    this.element.style.left = `${Math.round(o.left + rect.x)}px`;
+    this.element.style.top = `${Math.round(o.top + rect.y + rect.height - 1)}px`;
   }
 
   destroy(): void {

@@ -444,14 +444,65 @@ async function mountInner(
   const privacy = config.privacyScreen === false ? null : new PrivacyScreen(ui);
 
   let frame = 0;
+  // ---- 'auto' layout for tall forms: a canvas "window" that follows the page scroll.
+  // Browsers cap canvas size (iOS Safari ≈16.7M pixels), so a form taller than ~2 screens
+  // gets a canvas of at most that height, moved within the host as the page scrolls; the host
+  // keeps the form's full height so native scrolling, anchors and layout are unchanged.
+  let formHeight = 0;
+  let windowTop = 0;
+  let windowed = false;
+  const hostInlineHeight = host.style.height;
+  const maxCanvasHeight = () => Math.max(720, Math.round(window.innerHeight * 2));
+  const placeWindow = (force = false) => {
+    if (destroyed || !autoHeight) return;
+    const width = app.screen.width;
+    const cap = maxCanvasHeight();
+    const shouldWindow = formHeight > cap;
+    if (shouldWindow !== windowed) {
+      windowed = shouldWindow;
+      canvas.style.position = windowed ? 'absolute' : '';
+      canvas.style.left = windowed ? '0' : '';
+      host.style.height = windowed ? `${formHeight}px` : hostInlineHeight;
+      force = true;
+    }
+    if (windowed) host.style.height = `${formHeight}px`;
+    const h = windowed ? cap : formHeight;
+    let top = 0;
+    if (windowed) {
+      const vh = window.innerHeight;
+      const hostTop = host.getBoundingClientRect().top;
+      const viewTop = -hostTop; // viewport top in host coordinates
+      const margin = Math.round(vh * 0.15);
+      const covered = viewTop - margin >= windowTop && viewTop + vh + margin <= windowTop + h;
+      top = covered && !force ? windowTop : Math.round(viewTop - (h - vh) / 2); // centre on the viewport
+      top = Math.max(0, Math.min(formHeight - h, top));
+    }
+    if (app.screen.height !== h) app.renderer.resize(width, h);
+    if (top !== windowTop || force) {
+      windowTop = top;
+      canvas.style.top = windowed ? `${top}px` : '';
+      ui.content.y = -top;
+      ui.emit('scroll');
+      const cur = ui.focus.current;
+      if (cur) ui.repositionProxy(cur);
+    }
+  };
+  let windowFrame = 0;
+  const onWindowScroll = () => {
+    if (windowed && !windowFrame) windowFrame = requestAnimationFrame(() => ((windowFrame = 0), placeWindow()));
+  };
+  window.addEventListener('scroll', onWindowScroll, { capture: true, passive: true });
+  window.addEventListener('resize', onWindowScroll, { passive: true });
+
   const relayout = () => {
     frame = 0;
     if (destroyed) return;
     const width = Math.max(280, host.clientWidth);
     if (autoHeight) {
       surface.layout(width);
-      const height = Math.ceil(surface.layoutHeight);
-      if (app.screen.width !== width || app.screen.height !== height) app.renderer.resize(width, height);
+      formHeight = Math.ceil(surface.layoutHeight);
+      if (app.screen.width !== width) app.renderer.resize(width, app.screen.height);
+      placeWindow(true);
     } else {
       scroll!.setViewport(app.screen.width, app.screen.height);
     }
@@ -522,8 +573,8 @@ async function mountInner(
   Object.assign(sentinel.style, { position: 'absolute', left: '0', width: '1px', pointerEvents: 'none', visibility: 'hidden' });
   host.appendChild(sentinel);
   const reveal = (c: Focusable) => {
-    const b = c.view.getBounds();
-    sentinel.style.top = `${Math.max(0, b.y - 24)}px`;
+    const b = c.view.getBounds(); // canvas coordinates; the canvas sits `windowTop` px into the host
+    sentinel.style.top = `${Math.max(0, b.y + windowTop - 24)}px`;
     sentinel.style.height = `${b.height + 48}px`;
     sentinel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
@@ -586,6 +637,10 @@ async function mountInner(
       mq.removeEventListener('change', onScheme);
       window.visualViewport?.removeEventListener('resize', onViewport);
       window.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener('scroll', onWindowScroll, { capture: true });
+      window.removeEventListener('resize', onWindowScroll);
+      cancelAnimationFrame(windowFrame);
+      host.style.height = hostInlineHeight;
       ui.off('focuschange', onFocusChange);
       analytics?.destroy(); // sends form_abandon if the user started but didn't finish
       privacy?.destroy();

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Mobile: dragging inside an open dropdown now scrolls the list instead of the page, and swiping left/right on the
+  calendar moves to the next/previous month (or year page). Dragging elsewhere on the form still scrolls the page.
+
 ## 0.1.2
 
 - Tall forms in `layout: 'auto'`: the canvas stays at most about two screens tall and follows the page scroll, so forms

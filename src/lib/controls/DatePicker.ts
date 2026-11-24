@@ -105,6 +105,10 @@ export class DatePicker extends Control<string | null> {
   private typed = '';
   private typedTimer = 0;
   private readonly popup = new Container();
+  private releaseTouch: (() => void) | null = null;
+  /** Touch swipe on the calendar: start point, and whether the last gesture was a swipe. */
+  private swipe: { x: number; y: number; id: number } | null = null;
+  private swiped = false;
   private readonly catcher = new Graphics();
   private readonly panel = new Graphics();
   private readonly marks = new Graphics();
@@ -158,8 +162,25 @@ export class DatePicker extends Control<string | null> {
     this.panel.cursor = 'pointer';
     this.panel.on('pointerdown', (e: FederatedPointerEvent) => {
       this.ui.focus.claimed = true;
+      this.swiped = false;
+      this.swipe = e.pointerType === 'mouse' ? null : { x: e.global.x, y: e.global.y, id: e.pointerId };
       e.stopPropagation();
     });
+    // Swipe left/right (touch) to move to the next/previous month (or year page).
+    const endSwipe = (e: FederatedPointerEvent) => {
+      const s = this.swipe;
+      this.swipe = null;
+      if (!s || s.id !== e.pointerId || !this.open) return;
+      const dx = e.global.x - s.x;
+      const dy = e.global.y - s.y;
+      if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        this.swiped = true; // the tap that follows this pointerup must not pick a day
+        this.stepView(dx < 0 ? 1 : -1);
+        this.drawPopup();
+      }
+    };
+    this.panel.on('pointerup', endSwipe);
+    this.panel.on('pointerupoutside', endSwipe);
     this.panel.on('pointertap', (e: FederatedPointerEvent) => this.onPanelTap(e));
     this.panel.on('pointermove', (e: FederatedPointerEvent) => {
       const h = this.hitTest(e);
@@ -292,12 +313,15 @@ export class DatePicker extends Control<string | null> {
       this.zone = 'grid';
       this.hover = null;
       this.ui.overlay.addChild(this.popup);
+      this.releaseTouch = this.ui.ownTouch(this.panel); // swipes change months, not scroll the page
       this.ui.focus.keyInterceptor = this.popupKeys;
       this.ui.ticker.add(this.follow, this);
       this.drawPopup();
       this.ui.announcer.announce(`Calendar open. ${this.fmt.long(this.active)}. Use arrow keys to choose.`);
     } else {
       this.popup.parent?.removeChild(this.popup);
+      this.releaseTouch?.();
+      this.releaseTouch = null;
       if (this.ui.focus.keyInterceptor === this.popupKeys) this.ui.focus.keyInterceptor = null;
       this.ui.ticker.remove(this.follow, this);
     }
@@ -496,22 +520,33 @@ export class DatePicker extends Control<string | null> {
     this.setOpen(!this.open);
   }
 
+  /** Moves the visible page: a month in days view, a year in months view, 12 years in years view. */
+  private stepView(d: number): void {
+    if (this.calView === 'days') {
+      const t = addMonths({ y: this.viewYear, m: this.viewMonth, d: 1 }, d);
+      this.viewYear = t.y;
+      this.viewMonth = t.m;
+      this.ui.announcer.announce(this.fmt.monthYear(this.viewYear, this.viewMonth));
+    } else {
+      this.viewYear += this.calView === 'months' ? d : d * 12;
+      this.ui.announcer.announce(String(this.viewYear));
+    }
+  }
+
   private onPanelTap(e: FederatedPointerEvent): void {
     this.ui.focus.claimed = true;
+    if (this.swiped) {
+      this.swiped = false;
+      return;
+    }
     if (this.ui.focus.gestureMoved) return;
     const h = this.hitTest(e);
     if (!h) return;
     switch (h.kind) {
       case 'prev':
-      case 'next': {
-        const d = h.kind === 'prev' ? -1 : 1;
-        if (this.calView === 'days') {
-          const t = addMonths({ y: this.viewYear, m: this.viewMonth, d: 1 }, d);
-          this.viewYear = t.y;
-          this.viewMonth = t.m;
-        } else this.viewYear += this.calView === 'months' ? d : d * 12;
+      case 'next':
+        this.stepView(h.kind === 'prev' ? -1 : 1);
         break;
-      }
       case 'title':
         this.calView = this.calView === 'days' ? 'months' : this.calView === 'months' ? 'years' : 'days';
         break;

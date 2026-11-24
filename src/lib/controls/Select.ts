@@ -37,6 +37,7 @@ export class Select<T extends string = string> extends Control<T | null> {
   private highlight = -1;
   private scrollTop = 0;
   private readonly menu = new Container();
+  private releaseTouch: (() => void) | null = null;
   private readonly catcher = new Graphics();
   private readonly panel = new Graphics();
   private readonly list = new Container();
@@ -154,11 +155,14 @@ export class Select<T extends string = string> extends Control<T | null> {
       this.highlight = Math.max(0, this.options.findIndex((o) => o.value === this.value));
       this.ensureVisible(this.highlight, true);
       this.ui.overlay.addChild(this.menu);
+      this.releaseTouch = this.ui.ownTouch(this.panel); // swipes on the visible menu scroll the list, not the page
       this.ui.focus.keyInterceptor = this.menuKeys;
       this.ui.ticker.add(this.followAnchor, this);
       this.drawMenu();
     } else {
       this.menu.parent?.removeChild(this.menu);
+      this.releaseTouch?.();
+      this.releaseTouch = null;
       if (this.ui.focus.keyInterceptor === this.menuKeys) this.ui.focus.keyInterceptor = null;
       this.ui.ticker.remove(this.followAnchor, this);
     }

@@ -49,6 +49,8 @@ export class FormUI extends Container {
   private readonly endGuard: HTMLElement;
   /** Hidden DOM outline for screen readers (null when `a11y.outline` is false). */
   readonly outline: A11yTree | null;
+  /** Popup areas (open menus, calendars) whose touch gestures must not scroll the page. */
+  private readonly touchOwners = new Set<Container>();
   private readonly interactionListeners = new Set<(e: Event) => void>();
 
   constructor(app: Application, opts: FormUIOptions = {}) {
@@ -84,6 +86,9 @@ export class FormUI extends Container {
     // The browser cancels pointers when it takes over a touch for native scrolling.
     // The scene graph has no pointercancel event, so broadcast it to reset pressed/dragging states.
     app.canvas.addEventListener('pointercancel', this.onPointerCancel);
+    // In 'auto' layout the canvas lets the browser pan the page vertically (touch-action: pan-y).
+    // A swipe that starts on an open popup belongs to the popup (scroll a list, swipe months).
+    app.canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
 
     // The pixels are decorative for assistive technology: the accessibility
     // outline and the keyboard proxy carry the semantics.
@@ -220,6 +225,34 @@ export class FormUI extends Container {
     return this.app.ticker;
   }
 
+  /**
+   * Claims touch gestures that start inside `area` while it's shown (e.g. an open dropdown),
+   * so swiping scrolls the popup instead of the page. Returns a function that releases it.
+   */
+  ownTouch(area: Container): () => void {
+    this.touchOwners.add(area);
+    return () => this.touchOwners.delete(area);
+  }
+
+  private onTouchStart = (e: TouchEvent): void => {
+    if (!e.isTrusted || !this.touchOwners.size || e.touches.length !== 1) return;
+    const r = this.app.canvas.getBoundingClientRect();
+    const x = e.touches[0].clientX - r.left;
+    const y = e.touches[0].clientY - r.top;
+    for (const area of this.touchOwners) {
+      let shown = !area.destroyed;
+      for (let n: Container | null = area; n && shown; n = n.parent) if (!n.visible) shown = false;
+      let root: Container = area;
+      while (root.parent) root = root.parent;
+      if (!shown || root !== this.app.stage) continue;
+      const b = area.getBounds();
+      if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
+        e.preventDefault(); // keeps the page still; pointer events still reach the popup
+        return;
+      }
+    }
+  };
+
   /** Subscribe to trusted user interactions (used by BotGuard / idle timers). */
   onInteraction(fn: (e: Event) => void): () => void {
     this.interactionListeners.add(fn);
@@ -257,6 +290,8 @@ export class FormUI extends Container {
     this.app.canvas.removeEventListener('pointerdown', this.onNativePointer, { capture: true });
     this.app.canvas.removeEventListener('contextmenu', this.preventContextMenu);
     this.app.canvas.removeEventListener('pointercancel', this.onPointerCancel);
+    this.app.canvas.removeEventListener('touchstart', this.onTouchStart);
+    this.touchOwners.clear();
     this.app.canvas.removeEventListener('focus', this.onCanvasFocus);
     this.app.stage.off('pointerdown', this.onStagePointerDown);
     window.visualViewport?.removeEventListener('resize', this.onVisualViewport);

@@ -1,11 +1,15 @@
-// PixiFormUI website: a static-assets Worker (no server code).
+// PixiFormUI website: static assets, plus a small Worker that counts /v/* downloads.
 //   npm run build:site   → dist-site/
 //   npm run deploy:site  → build + wrangler deploy
 {
   "name": "pixiformui",
   "compatibility_date": "2026-09-01",
+  // Worker code runs only for /v/* (download counting); everything else is served as static files.
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist-site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/v/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
@@ -14,5 +18,7 @@
   "routes": [{ "pattern": "pixiformui.lets.gen.in", "custom_domain": true }],
   "workers_dev": false,
   "preview_urls": false,
+  // Download counts (Workers Analytics Engine; the dataset is created on first write).
+  "analytics_engine_datasets": [{ "binding": "DOWNLOADS", "dataset": "pixiformui_downloads" }],
   "observability": { "enabled": true }
 }

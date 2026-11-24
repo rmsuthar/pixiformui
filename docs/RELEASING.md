@@ -40,3 +40,16 @@ After publishing, jsDelivr and unpkg serve the package automatically:
 - Old versions stay downloadable from the website only if you keep their files: copy `dist-site/v/<old>/` forward
   or keep them in `site/public/v/<old>/` before building a new version.
 - Never unpublish a version people depend on; publish a fixed patch release instead.
+
+## Usage stats
+
+`npm run stats` prints npm downloads (per version, with a 30-day trend), jsDelivr CDN hits, GitHub stars and
+dependents, and downloads of the self-hosted bundles from `pixiformui.lets.gen.in/v/…`.
+
+The website Worker ([worker/index.ts](../worker/index.ts)) counts each `/v/*` download in Workers Analytics Engine:
+version, file, country, the embedding site's domain (from the `Referer` header) and a rough client type. It stores no
+IP addresses, cookies or personal data. To include these numbers, create a Cloudflare API token with
+**Account → Account Analytics → Read** and run `CLOUDFLARE_API_TOKEN=… npm run stats`.
+
+The library itself contains no telemetry and never will: usage is measured only from the outside.
+

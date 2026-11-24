@@ -43,13 +43,12 @@ After publishing, jsDelivr and unpkg serve the package automatically:
 
 ## Usage stats
 
-`npm run stats` prints npm downloads (per version, with a 30-day trend), jsDelivr CDN hits, GitHub stars and
-dependents, and downloads of the self-hosted bundles from `pixiformui.lets.gen.in/v/…`.
+`npm run stats` prints, from public sources with no setup: npm downloads (per version, with a 30-day trend), jsDelivr
+CDN hits per version, and GitHub stars, forks and dependents ("used by"). GitHub's own traffic page shows repository
+views, clones and referrers: https://github.com/rmsuthar/pixiformui/graphs/traffic
 
-The website Worker ([worker/index.ts](../worker/index.ts)) counts each `/v/*` download in Workers Analytics Engine:
-version, file, country, the embedding site's domain (from the `Referer` header) and a rough client type. It stores no
-IP addresses, cookies or personal data. To include these numbers, create a Cloudflare API token with
-**Account → Account Analytics → Read** and run `CLOUDFLARE_API_TOKEN=… npm run stats`.
+To see which websites use the script, search public code (GitHub code search for `pixiformui`) or website scanners
+(for example PublicWWW for `pixiformui.standalone.js`).
 
 The library itself contains no telemetry and never will: usage is measured only from the outside.
 

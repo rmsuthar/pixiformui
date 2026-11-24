@@ -1,11 +1,8 @@
-// Usage report for PixiFormUI: npm downloads, jsDelivr hits, GitHub, and self-hosted /v/ downloads.
+// Usage report for PixiFormUI from public sources (no accounts or setup needed):
+// npm downloads, jsDelivr CDN hits, GitHub stars and dependents.
 //   npm run stats                 (last 30 days; optional GITHUB_TOKEN avoids GitHub's anonymous rate limit)
-// Self-hosted downloads come from Workers Analytics Engine and need a Cloudflare API token with
-// "Account Analytics: Read":  CLOUDFLARE_API_TOKEN=… npm run stats
 const PKG = 'pixiformui';
 const REPO = 'rmsuthar/pixiformui';
-const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID ?? '4af9d9d35deae8ad0716390fe20cdc7c';
-const DATASET = 'pixiformui_downloads';
 const DAYS = 30;
 
 const get = async (url, opts = {}) => {
@@ -68,40 +65,4 @@ try {
 } catch {}
 console.log(`  traffic (views, clones, referrers): https://github.com/${REPO}/graphs/traffic`);
 
-// ---- self-hosted downloads (Workers Analytics Engine)
-head('Self-hosted downloads (pixiformui.lets.gen.in/v/…)');
-const token = process.env.CLOUDFLARE_API_TOKEN;
-if (!token) {
-  console.log('  Set CLOUDFLARE_API_TOKEN (Cloudflare → My Profile → API Tokens → Create token,');
-  console.log('  permission "Account → Account Analytics → Read") to see downloads, embedding sites and countries.');
-} else {
-  const sql = async (q) => {
-    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/analytics_engine/sql`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: `${q} FORMAT JSON`,
-      signal: AbortSignal.timeout(15_000),
-    });
-    const text = await r.text();
-    if (!r.ok) throw new Error(`${r.status}: ${text.slice(0, 200)}`);
-    return JSON.parse(text).data ?? [];
-  };
-  const since = `timestamp > NOW() - INTERVAL '${DAYS}' DAY`;
-  try {
-    const files = await sql(`SELECT blob1 AS version, blob2 AS file, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE ${since} GROUP BY version, file ORDER BY downloads DESC LIMIT 20`);
-    table(files.map((r) => ({ ...r, downloads: n(r.downloads) })), ['version', 'file', 'downloads']);
-    head('  Embedding sites (Referer), excluding bots');
-    const sites = await sql(`SELECT blob4 AS site, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE ${since} AND blob5 != 'bot/tool' GROUP BY site ORDER BY downloads DESC LIMIT 20`);
-    table(sites.map((r) => ({ ...r, downloads: n(r.downloads) })), ['site', 'downloads']);
-    head('  Countries');
-    const countries = await sql(`SELECT blob3 AS country, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE ${since} GROUP BY country ORDER BY downloads DESC LIMIT 15`);
-    table(countries.map((r) => ({ ...r, downloads: n(r.downloads) })), ['country', 'downloads']);
-    head('  Clients');
-    const clients = await sql(`SELECT blob5 AS client, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE ${since} GROUP BY client ORDER BY downloads DESC`);
-    table(clients.map((r) => ({ ...r, downloads: n(r.downloads) })), ['client', 'downloads']);
-  } catch (e) {
-    console.log(`  unavailable: ${e.message}`);
-    if (/dataset|not exist|unknown table/i.test(e.message)) console.log('  (The dataset is created on the first download after deploying.)');
-  }
-}
 console.log('');

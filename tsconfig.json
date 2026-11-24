@@ -33,8 +33,5 @@
     "scripts",
     "site",
     "vite.site.config.ts"
-  ],
-  "exclude": [
-    "worker"
   ]
 }

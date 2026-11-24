@@ -1,5 +1,9 @@
 # PixiFormUI
 
+[![CI](https://github.com/rmsuthar/pixiformui/actions/workflows/ci.yml/badge.svg)](https://github.com/rmsuthar/pixiformui/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/pixiformui)](https://www.npmjs.com/package/pixiformui)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Secure, fully themeable form controls drawn on **Canvas 2D** with no runtime dependencies. Like a Flutter web app, every control is
 painted on a `<canvas>`, so **field values never exist in the page DOM**. Browser extensions, DOM scrapers
 and injected scripts can't read them with `querySelector`.

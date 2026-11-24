@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5
 
 - **Autofill and password managers (opt-in):** fields accept a standard `autocomplete` token (`email`, `name`,
   `tel`, `current-password`, `new-password`, `username webauthn`…); the phone input takes `autocomplete: true`.

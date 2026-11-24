@@ -76,6 +76,9 @@ Forms are described as data (`fields: [{ type: 'email', name: 'email', label: 'E
 They size themselves to their content, so the host page scrolls normally, including on phones. Full details are in
 [Developer Guide §23](docs/DEVELOPER_GUIDE.md#23-using-pixiform-in-existing-apps-html-react-angular-).
 
+You can read and update values directly on the element via `document.querySelector('pixi-form')`:
+`form.values()` returns all values (passwords as opaque `Secret` handles), `form.setValues(data)` fills fields from a record, and `form.get('field').setValue(v)` targets an individual control. (Native `document.querySelector('input')` selectors do not find them because fields are drawn on `<canvas>`, by design.)
+
 ## 2. Project layout
 
 ```

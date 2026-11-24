@@ -1627,6 +1627,26 @@ there, and call `form.destroy()`, `ui.destroy()` and `app.destroy()` on unmount.
 **How do I prefill values?** Use the `value`/`checked` options, or `control.setValue(v, false)` (no events).
 Password fields can't be prefilled with plaintext, by design.
 
+**Can I read or set field values with `document.querySelector('input')`?** No, and this is by design. Every control
+is painted on an HTML5 `<canvas>`, so there are no native `<input>` elements in the DOM. This protects values from
+DOM-scraping browser extensions and XSS scripts. To read or set values programmatically from JavaScript:
+
+```js
+const form = document.querySelector('pixi-form');
+
+// 1. Read all values (passwords are opaque Secret handles, never plaintext)
+const values = form.values();           // or form.handle.values()
+console.log(values.email);
+
+// 2. Set multiple fields at once (secret fields are skipped for security)
+form.setValues({ fullName: 'Ada Lovelace', email: 'ada@example.com' });
+
+// 3. Get or set a single control
+const email = form.get('email');        // or form.handle.get('email')
+console.log(email.getValue());
+email.setValue('ada.lovelace@example.com');
+```
+
 ---
 
 ## 22. API quick reference
@@ -1831,6 +1851,22 @@ el.addEventListener('pixiform-success', (e) => console.log(e.detail.result));
 | `pixiform-success` / `pixiform-failure` | `{ result }` |
 | `pixiform-invalid` | `{ errors }` |
 | `pixiform-change` | `{ name, value }` (secret fields carry a `Secret` handle) |
+
+#### Methods on `<pixi-form>`
+
+The custom element forwards the main form methods directly, so you can interact with it via `document.querySelector('pixi-form')`:
+
+```js
+const form = document.querySelector('pixi-form');
+
+form.values()                 // Record<string, unknown> (all fields; passwords are Secret handles)
+form.setValues({ ... })       // Updates non-secret fields, re-validates and repaints the canvas
+form.get('email')             // Returns the individual Control instance (e.g. form.get('email').setValue('...'))
+form.submit()                 // Programmatically triggers validation and onSubmit
+form.reset()                  // Restores initial empty state
+```
+
+> **Note on DOM scraping:** Native `<input>` selectors like `document.querySelector('input')` will **not** find form fields, because every control is rendered on a `<canvas>`. Always use the `<pixi-form>` element methods or its `.handle` property.
 
 Setting `el.config` again rebuilds the form. `el.handle` gives the live handle, and removing the element from the
 DOM destroys it. Run the example with `npm run build:lib && npm run dev`, then open

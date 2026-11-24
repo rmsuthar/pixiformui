@@ -1,5 +1,6 @@
-import type { SubmitResult } from './Form';
+import type { FormValues, SetValuesResult, SubmitResult } from './Form';
 import type { AnalyticsEvent } from './analytics';
+import type { Control } from './core/Control';
 import { PIXIFORM_EVENTS, type PixiFormEventMap, type PixiFormListeners } from './events';
 import { mountPixiForm, type PixiFormConfig, type PixiFormHandle } from './mount';
 
@@ -49,6 +50,37 @@ export class PixiFormElement extends HTMLElement {
   /** The live handle (null until `pixiform-ready`). */
   get handle(): PixiFormHandle | null {
     return this.#handle;
+  }
+
+  /**
+   * Returns current values of all fields. Passwords are returned as opaque
+   * `Secret` handles (never plaintext strings).
+   */
+  values(): FormValues {
+    return this.#handle?.values() ?? {};
+  }
+
+  /**
+   * Updates non-secret fields from a key-value record, re-validating and redrawing.
+   * Secret and sensitive fields (passwords, OTP) are skipped for security.
+   */
+  setValues(values: Record<string, unknown>, opts?: { emit?: boolean; validate?: boolean }): SetValuesResult {
+    return this.#handle?.form.setValues(values, opts) ?? { applied: [], skipped: {} };
+  }
+
+  /** Gets an individual control by its declared field name. */
+  get<T extends Control<any> = Control<any>>(name: string): T | undefined {
+    return this.#handle?.get<T>(name);
+  }
+
+  /** Programmatically triggers form submission. */
+  submit(): Promise<SubmitResult | null> {
+    return this.#handle ? this.#handle.submit() : Promise.resolve(null);
+  }
+
+  /** Restores all fields to their initial empty states. */
+  reset(): void {
+    this.#handle?.reset();
   }
 
   connectedCallback(): void {

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - Mobile: dragging inside an open dropdown now scrolls the list instead of the page, and swiping left/right on the
   calendar moves to the next/previous month (or year page). Dragging elsewhere on the form still scrolls the page.

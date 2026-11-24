@@ -11,7 +11,11 @@ export default defineConfig({
     target: 'es2022',
     minify: 'terser',
     rollupOptions: {
-      input: { index: resolve(__dirname, 'site/index.html'), notFound: resolve(__dirname, 'site/404.html') },
+      input: {
+        index: resolve(__dirname, 'site/index.html'),
+        playground: resolve(__dirname, 'site/playground/index.html'),
+        notFound: resolve(__dirname, 'site/404.html'),
+      },
     },
   },
 });

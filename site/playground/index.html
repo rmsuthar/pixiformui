@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PixiFormUI Playground: build a secure form live</title>
+    <meta name="description" content="Edit a PixiFormUI form config and see the canvas form update live. Try presets, inspect the encrypted payload and events, copy the code, and share a link." />
+    <link rel="canonical" href="https://pixiformui.lets.gen.in/playground/" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PixiFormUI" />
+    <meta property="og:title" content="PixiFormUI Playground: build a secure form live" />
+    <meta property="og:description" content="Edit a form config and see the canvas form update live. Copy the code or share a link." />
+    <meta property="og:url" content="https://pixiformui.lets.gen.in/playground/" />
+    <meta property="og:image" content="https://pixiformui.lets.gen.in/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="alternate" type="application/atom+xml" title="PixiFormUI releases" href="/releases/feed.xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+    <script src="/js/menu.js" defer></script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://pixiformui.lets.gen.in/"},{"@type":"ListItem","position":2,"name":"Playground","item":"https://pixiformui.lets.gen.in/playground/"}]},{"@type":"WebApplication","name":"PixiFormUI Playground","url":"https://pixiformui.lets.gen.in/playground/","applicationCategory":"DeveloperApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true}]}</script>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="/" aria-label="PixiFormUI home">
+          <img src="/favicon.svg" alt="" width="28" height="28" />
+          <span>PixiForm<b>UI</b></span>
+        </a>
+        <a class="version" href="/releases/" title="Release notes" aria-label="Version __PIXIFORM_VERSION__: release notes">v__PIXIFORM_VERSION__</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" hidden>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg>
+        </button>
+        <nav id="site-nav" aria-label="Main">
+          <a href="/#features">Features</a>
+          <a href="/#demo">Demo</a>
+          <a href="/playground/" aria-current="page">Playground</a>
+          <a href="/docs/install/">Install</a>
+          <a href="/docs/">Docs</a>
+          <a href="/#contact">Contact</a>
+          <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap playground" data-version="__PIXIFORM_VERSION__">
+      <div class="pg-head">
+        <div>
+          <h1>Playground</h1>
+          <p class="section-lead">Edit the config (JSON) and the form updates live. Nothing you type is sent anywhere.</p>
+        </div>
+        <div class="pg-actions">
+          <label class="pg-preset">
+            <span>Preset</span>
+            <select id="preset"></select>
+          </label>
+          <button type="button" class="btn" id="format">Format</button>
+          <button type="button" class="btn primary" id="share">Copy share link</button>
+        </div>
+      </div>
+
+      <div class="pg-grid">
+        <section class="pg-editor" aria-labelledby="editor-label">
+          <div class="pg-bar"><span id="editor-label">config.json</span><span class="pg-hint">Field types, options and events: <a href="/docs/guide/using-pixiform-in-existing-apps-html-react-angular/#232-the-config-object">config reference</a></span></div>
+          <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="editor-status" wrap="off"></textarea>
+          <p id="editor-status" class="pg-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="pg-preview" aria-label="Live form">
+          <div class="pg-bar"><span>Live preview</span><span class="pg-hint" id="preview-meta"></span></div>
+          <div id="preview" class="form-host"></div>
+        </section>
+      </div>
+
+      <section class="panels pg-panels">
+        <div class="tabs" role="tablist" aria-label="Inspect">
+          <button role="tab" id="tab-code" aria-controls="panel-code" aria-selected="true">Code</button>
+          <button role="tab" id="tab-payload" aria-controls="panel-payload" aria-selected="false" tabindex="-1">Submitted payload</button>
+          <button role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false" tabindex="-1">Events</button>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-code" aria-labelledby="tab-code">
+          <div class="pg-code-head">
+            <div class="seg" role="group" aria-label="Code format">
+              <button type="button" data-code="html" aria-pressed="true">HTML</button>
+              <button type="button" data-code="js">JavaScript</button>
+            </div>
+            <button type="button" class="btn" id="copy-code">Copy code</button>
+          </div>
+          <pre><code id="code"></code></pre>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-payload" aria-labelledby="tab-payload" hidden>
+          <p class="muted">Submit the form to see the JSON your server would receive. Passwords are encrypted with a key generated in this browser.</p>
+          <pre><code id="payload">// waiting for a submit…</code></pre>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" hidden>
+          <p class="muted">Form and lifecycle events (field names and states only, never values).</p>
+          <ol id="events" class="events"></ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>© 2026 PixiFormUI</span>
+        <nav aria-label="Footer">
+          <a href="/docs/guide/">Guide</a>
+          <a href="/releases/">Releases</a>
+          <a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

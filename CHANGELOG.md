@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Tall forms in `layout: 'auto'`: the canvas stays at most about two screens tall and follows the page scroll, so forms
   of any length stay within mobile canvas limits (iOS Safari) and memory stays flat. Off-screen controls are skipped

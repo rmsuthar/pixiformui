@@ -20,7 +20,8 @@
     "test:e2e": "playwright test",
     "stats": "node scripts/stats.mjs",
     "size": "node scripts/size-check.mjs",
-    "docs:images": "node scripts/doc-images.mjs"
+    "docs:images": "node scripts/doc-images.mjs",
+    "waitlist": "node scripts/waitlist.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",

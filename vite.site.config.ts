@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'site/index.html'),
         playground: resolve(__dirname, 'site/playground/index.html'),
+        pro: resolve(__dirname, 'site/pro/index.html'),
         notFound: resolve(__dirname, 'site/404.html'),
       },
     },

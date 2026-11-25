@@ -339,7 +339,7 @@ ${olderHtml}
 });
 console.log(`install page + /v/${version}/ downloads`);
 // Header version badge on the Vite-built pages (home, 404).
-for (const f of ['index.html', '404.html', 'playground/index.html']) {
+for (const f of ['index.html', '404.html', 'playground/index.html', 'pro/index.html']) {
   const file = join(out, f);
   writeFileSync(file, readFileSync(file, 'utf8').replaceAll('__PIXIFORM_VERSION__', version));
 }
@@ -511,6 +511,7 @@ function layout(p) {
           <a href="/#features">Features</a>
           <a href="/#demo">Demo</a>
           <a href="/playground/">Playground</a>
+          <a href="/pro/">Pro</a>
           <a href="/docs/install/">Install</a>
           <a href="/docs/" aria-current="page">Docs</a>
           <a href="/#contact">Contact</a>
@@ -601,7 +602,7 @@ writeFileSync(
 );
 
 // ------------------------------------------------------------------ sitemap + robots
-const urls = ['/', '/playground/', ...pages.map((p) => p.url)];
+const urls = ['/', '/playground/', '/pro/', ...pages.map((p) => p.url)];
 writeFileSync(
   join(out, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>

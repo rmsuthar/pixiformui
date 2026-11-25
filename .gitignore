@@ -20,3 +20,6 @@ __pycache__
 *.class
 playwright-report
 test-results
+
+# Waitlist exports (personal data)
+waitlist-*.csv

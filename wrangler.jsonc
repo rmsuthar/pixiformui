@@ -1,11 +1,16 @@
-// PixiFormUI website: static assets only (no Worker code).
+// PixiFormUI website: static assets, plus a small Worker (site/worker.ts) for /api/* only
+// (the Pro & Cloud waitlist). Every other request is served straight from dist-site/.
 //   npm run build:site   → dist-site/
 //   npm run deploy:site  → build + wrangler deploy
+//   npm run waitlist     → export sign-ups to CSV
 {
   "name": "pixiformui",
   "compatibility_date": "2026-09-01",
+  "main": "site/worker.ts",
   "assets": {
     "directory": "./dist-site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
@@ -14,5 +19,8 @@
   "routes": [{ "pattern": "pixiformui.lets.gen.in", "custom_domain": true }],
   "workers_dev": false,
   "preview_urls": false,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Waitlist sign-ups. The HMAC key for proof-of-work challenges is a secret:
+  //   openssl rand -base64 32 | npx wrangler secret put WAITLIST_SECRET
+  "kv_namespaces": [{ "binding": "WAITLIST", "id": "2c8c8a2e0f884d9aa67708065b32dbd9" }]
 }

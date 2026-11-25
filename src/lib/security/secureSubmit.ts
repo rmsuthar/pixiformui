@@ -7,6 +7,11 @@ export interface SecureSubmitOptions {
   allowedOrigins?: string[];
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /**
+   * Sent as the `Idempotency-Key` header so the server processes a retried request only once
+   * (e.g. after a lost response). Use `form.idempotencyKey` inside onSubmit.
+   */
+  idempotencyKey?: string;
 }
 
 export function readCsrfToken(): string | null {
@@ -34,6 +39,10 @@ export async function secureSubmit(url: string, body: unknown, opts: SecureSubmi
     'X-Requested-With': 'XMLHttpRequest',
     ...opts.headers,
   };
+  if (opts.idempotencyKey) {
+    if (!/^[A-Za-z0-9_-]{8,128}$/.test(opts.idempotencyKey)) throw new Error('Invalid idempotency key');
+    headers['Idempotency-Key'] = opts.idempotencyKey;
+  }
   const token = opts.csrfToken === undefined ? readCsrfToken() : opts.csrfToken;
   if (token) headers[opts.csrfHeader ?? 'X-CSRF-Token'] = token;
 

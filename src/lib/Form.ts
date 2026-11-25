@@ -1,4 +1,4 @@
-import { EventEmitter } from './render/canvas';
+import { EventEmitter, type Container } from './render/canvas';
 import type { Control } from './core/Control';
 import type { FormUI } from './core/FormUI';
 import { BotGuard, type BotGuardOptions } from './security/BotGuard';
@@ -51,7 +51,16 @@ export interface FormOptions {
   idleTimeoutMs?: number;
   /** When to wipe secret fields after a submit attempt. Default 'always'. */
   wipeSecrets?: 'always' | 'success' | 'never';
+  /** Lock the form after a successful submit (fields and submit button disabled) until unlock(). */
+  once?: boolean;
+  /** Ignore new submits for this long (ms) after an attempt finishes, e.g. 3000. Default 0. */
+  cooldownMs?: number;
 }
+
+const newIdempotencyKey = (): string =>
+  typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b: number) => b.toString(16).padStart(2, '0')).join('');
 
 /**
  * Groups controls, validates them, applies anti-abuse checks, and calls
@@ -59,7 +68,8 @@ export interface FormOptions {
  * handles, never as strings.
  *
  * Events: 'submitstart', 'beforesubmit' ({ values, preventDefault }), 'submitting', 'success' (result), 'failure' (result),
- * 'invalid' (errors), 'blocked' (reason, code: 'bot' | 'rate_limit'), 'idle', 'reset', 'error' (Error).
+ * 'invalid' (errors), 'blocked' (reason, code: 'bot' | 'rate_limit' | 'cooldown'), 'idle', 'reset', 'error' (Error),
+ * 'lock' / 'unlock' (with `once`).
  */
 export class Form extends EventEmitter {
   readonly ui: FormUI;
@@ -71,6 +81,9 @@ export class Form extends EventEmitter {
   private idleTimer = 0;
   private readonly offInteraction: () => void;
   private submitButton: Button | null = null;
+  private _idempotencyKey: string | null = null;
+  private _locked = false;
+  private cooldownUntil = 0;
 
   constructor(ui: FormUI, opts: FormOptions) {
     super();
@@ -89,11 +102,54 @@ export class Form extends EventEmitter {
     return this.submitting;
   }
 
+  /**
+   * Key identifying the current logical submission, for an `Idempotency-Key` header so a server
+   * can process a retried request only once. Retries of the same values reuse it; it changes after
+   * the user edits a (non-secret) field, after a successful submit, and after reset().
+   *
+   *   await secureSubmit(url, body, { idempotencyKey: form.idempotencyKey });
+   */
+  get idempotencyKey(): string {
+    return (this._idempotencyKey ??= newIdempotencyKey());
+  }
+
+  /** True after a successful submit when `once` is set (see unlock()). */
+  get locked(): boolean {
+    return this._locked;
+  }
+
+  /** Re-enables a form locked by `once`. */
+  unlock(): void {
+    if (!this._locked) return;
+    this._locked = false;
+    for (const c of this.controls.values()) c.enabled = true;
+    if (this.submitButton) this.submitButton.enabled = true;
+    this.emit('unlock');
+  }
+
+  private lock(): void {
+    this._locked = true;
+    for (const c of this.controls.values()) c.enabled = false;
+    if (this.submitButton) this.submitButton.enabled = false;
+    this.emit('lock');
+  }
+
   add(...controls: Control<any>[]): this {
     for (const c of controls) {
       if (this.controls.has(c.fieldName)) throw new Error(`Duplicate field name "${c.fieldName}"`);
       this.controls.set(c.fieldName, c as Control<unknown>);
       c.formContext = () => ({ getField: (n: string) => this.controls.get(n) });
+      // A user edit to a non-secret field means a new logical submission (new idempotency key).
+      // Secrets are excluded: they're wiped after attempts and re-typed for a retry of the same data.
+      c.on('change', () => {
+        if (c.secure || c.sensitive) return;
+        for (let n: Container | null = this.ui.focus.current?.view ?? null; n; n = n.parent) {
+          if (n === c) {
+            this._idempotencyKey = null;
+            return;
+          }
+        }
+      });
       if (this.opts.autovalidateMode === 'disabled') c.validateOn = 'submit';
       if (this.opts.autovalidateMode === 'always') {
         c.validateOn = 'change';
@@ -210,10 +266,14 @@ export class Form extends EventEmitter {
   }
 
   async submit(): Promise<SubmitResult | null> {
-    if (this.submitting) return null;
+    if (this.submitting || this._locked) return null;
+    if (Date.now() < this.cooldownUntil) {
+      return this.block('Please wait a moment before submitting again.', 'cooldown');
+    }
     this.submitting = true;
     this.emit('submitstart');
     if (this.submitButton) this.submitButton.loading = true;
+    let attempted = false;
     try {
       const errors = await this.validate();
       const names = Object.keys(errors);
@@ -240,6 +300,8 @@ export class Form extends EventEmitter {
       if (limit && !limit.allowed) return this.block(`Too many attempts. Try again in ${Math.ceil(limit.retryInMs / 1000)}s.`, 'rate_limit');
 
       this.emit('submitting');
+      void this.idempotencyKey; // created before onSubmit so handlers can send it
+      attempted = true;
       let result: SubmitResult;
       try {
         result = (await this.opts.onSubmit(values, this)) ?? { ok: true };
@@ -254,12 +316,17 @@ export class Form extends EventEmitter {
       }
       const wipe = this.opts.wipeSecrets;
       if (wipe === 'always' || (wipe === 'success' && result.ok)) this.wipeSecrets();
-      if (result.ok) this.limiter?.reset();
+      if (result.ok) {
+        this.limiter?.reset();
+        this._idempotencyKey = null; // the next submit is a new operation
+      }
       if (result.message) this.ui.announcer.announce(result.message, !result.ok);
       this.emit(result.ok ? 'success' : 'failure', result);
+      if (result.ok && this.opts.once) this.lock();
       return result;
     } finally {
       this.submitting = false;
+      if (attempted && this.opts.cooldownMs) this.cooldownUntil = Date.now() + this.opts.cooldownMs;
       if (this.submitButton) this.submitButton.loading = false;
     }
   }
@@ -277,6 +344,7 @@ export class Form extends EventEmitter {
   }
 
   reset(): void {
+    this._idempotencyKey = null;
     for (const c of this.controls.values()) c.reset();
     this.wipeSecrets();
     this.emit('reset');
@@ -291,7 +359,7 @@ export class Form extends EventEmitter {
     this.removeAllListeners();
   }
 
-  private block(reason: string, code: 'bot' | 'rate_limit'): SubmitResult {
+  private block(reason: string, code: 'bot' | 'rate_limit' | 'cooldown'): SubmitResult {
     this.ui.announcer.announce(reason, true);
     this.emit('blocked', reason, code);
     return { ok: false, message: reason };

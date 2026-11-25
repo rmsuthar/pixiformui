@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Duplicate submissions:** `form.idempotencyKey` (stable across retries of the same values, including re-typed
+  passwords) is sent as an `Idempotency-Key` header by the `action` option and by `secureSubmit({ idempotencyKey })`.
+  The reference server replays the stored response for a repeated key (rejects reused keys with different data, 422,
+  and concurrent duplicates, 409), so a retry after a lost response is processed once.
+- New form options `once` (lock after success; `form.unlock()`) and `cooldownMs` (blocked event, code `'cooldown'`).
+
 ## 0.1.5
 
 - **Autofill and password managers (opt-in):** fields accept a standard `autocomplete` token (`email`, `name`,

@@ -214,7 +214,7 @@ async function main(): Promise<void> {
             password: pw.isEmpty ? '' : await sealSecret(pw, key, 'password'),
             confirmPassword: cf.isEmpty ? '' : await sealSecret(cf, key, 'confirmPassword'),
           },
-          { csrfToken: session.csrfToken },
+          { csrfToken: session.csrfToken, idempotencyKey: form.idempotencyKey },
         );
       };
       let res = await send();

@@ -17,7 +17,7 @@
  *  - Peppered scrypt (N=2^17) hashing; plaintext bytes zeroed; never logged or echoed
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { createHmac, randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -313,6 +313,8 @@ export async function verifyPassword(password: Buffer, stored: string): Promise<
 
 // ------------------------------------------------------------------ request helpers
 function readBody(req: IncomingMessage): Promise<string> {
+  const cached = (req as IncomingMessage & { rawBody?: string }).rawBody;
+  if (cached !== undefined) return Promise.resolve(cached); // already read by the idempotency layer
   return new Promise((ok, fail) => {
     const declared = Number(req.headers['content-length'] ?? 0);
     if (declared > MAX_BODY) return fail(Object.assign(new Error('too large'), { status: 413 }));
@@ -346,10 +348,105 @@ function sameOrigin(req: IncomingMessage): boolean {
 }
 
 // ------------------------------------------------------------------ API
+// ------------------------------------------------------------------ idempotency (duplicate submissions)
+/**
+ * `Idempotency-Key` support for state-changing endpoints: a retried request (same key, same data)
+ * gets the stored response instead of being processed twice, e.g. after a lost response on a
+ * flaky connection. Keys are scoped to the session; 5xx responses aren't stored (safe to retry).
+ */
+const IDEMPOTENT_PATHS = new Set([
+  '/api/register',
+  '/api/otp/send',
+  '/api/otp/verify',
+  '/api/passkey/register/verify',
+  '/api/passkey/login/verify',
+]);
+const IDEMPOTENCY_TTL = 24 * 60 * 60_000;
+interface IdemRecord {
+  hash: string;
+  state: 'pending' | 'done';
+  status?: number;
+  body?: string;
+  headers?: Record<string, string>;
+  expires: number;
+}
+const idempotency = new Map<string, IdemRecord>();
+
+/** Hash of the request body, treating encrypted fields as equal (every PFE1 envelope is unique). */
+function idempotencyHash(raw: string): string {
+  let canonical = raw;
+  try {
+    canonical = JSON.stringify(JSON.parse(raw), (_k, v) => (typeof v === 'string' && v.startsWith('pfe1.') ? 'pfe1:<encrypted>' : v));
+  } catch {
+    /* not JSON: hash the raw text */
+  }
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
+/** Returns true if the request was fully answered here (replayed or rejected). */
+async function applyIdempotency(req: IncomingMessage, res: ServerResponse, path: string): Promise<boolean> {
+  const key = req.headers['idempotency-key'];
+  if (req.method !== 'POST' || !IDEMPOTENT_PATHS.has(path) || key === undefined) return false;
+  if (typeof key !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(key)) {
+    json(res, 400, { ok: false, message: 'Invalid Idempotency-Key header.' });
+    return true;
+  }
+  const current = getSession(req);
+  if (!current || !sameOrigin(req)) return false; // the endpoint's own checks will reject it
+  let raw: string;
+  try {
+    raw = await readBody(req);
+  } catch (e) {
+    const status = (e as { status?: number }).status ?? 400;
+    json(res, status, { ok: false, message: status === 413 ? 'Request too large.' : 'Bad request.' });
+    return true;
+  }
+  (req as IncomingMessage & { rawBody?: string }).rawBody = raw;
+  const scoped = `${current.sid}:${path}:${key}`;
+  const hash = idempotencyHash(raw);
+  const now = Date.now();
+  const existing = idempotency.get(scoped);
+  if (existing && existing.expires > now) {
+    if (existing.hash !== hash) {
+      json(res, 422, { ok: false, message: 'This Idempotency-Key was already used with different data.' });
+      return true;
+    }
+    if (existing.state === 'pending') {
+      json(res, 409, { ok: false, message: 'Your previous submission is still being processed.' }, { 'Retry-After': '1', 'Idempotency-Status': 'in-progress' });
+      return true;
+    }
+    res.statusCode = existing.status!;
+    for (const [k, v] of Object.entries(existing.headers ?? {})) res.setHeader(k, v);
+    res.setHeader('Idempotency-Replayed', 'true');
+    res.end(existing.body);
+    return true;
+  }
+  if (idempotency.size > 10_000) for (const [k, r] of idempotency) if (r.expires <= now) idempotency.delete(k);
+  if (idempotency.size > 20_000) idempotency.clear();
+  const record: IdemRecord = { hash, state: 'pending', expires: now + IDEMPOTENCY_TTL };
+  idempotency.set(scoped, record);
+  // Capture the response when the endpoint finishes, so a retry can replay it.
+  const end = res.end.bind(res) as (chunk?: unknown) => ServerResponse;
+  (res as { end: (chunk?: unknown) => ServerResponse }).end = (chunk?: unknown) => {
+    if (res.statusCode >= 500) idempotency.delete(scoped);
+    else {
+      record.state = 'done';
+      record.status = res.statusCode;
+      record.body = typeof chunk === 'string' ? chunk : Buffer.isBuffer(chunk) ? chunk.toString('utf8') : '';
+      // json() sends headers via writeHead (not readable back), so replay with the API's JSON headers.
+      record.headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
+    }
+    return end(chunk);
+  };
+  res.on('close', () => record.state === 'pending' && idempotency.delete(scoped)); // aborted before answering
+  return false;
+}
+
 async function handleApi(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
   const ip = clientIp(req);
   const global = rateLimit(`global:${ip}`, 120, 60_000);
   if (!global.ok) return json(res, 429, { ok: false, message: 'Too many requests.' }, { 'Retry-After': String(global.retryAfter) });
+  if (await applyIdempotency(req, res, path)) return;
 
   if (path === '/api/session' && req.method === 'GET') {
     const { sid, session } = getSession(req) ?? createSession(res);

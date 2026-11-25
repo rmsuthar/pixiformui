@@ -38,6 +38,7 @@ reference server. This guide covers everything you need to build, style, extend,
 25. [Serialization, AJAX and MCP](#25-serialization-ajax-and-mcp)
 26. [Events and loading](#26-events-and-loading)
 27. [Autofill and passkeys](#27-autofill-and-passkeys)
+28. [Preventing duplicate submissions](#28-preventing-duplicate-submissions)
 
 ---
 
@@ -2267,4 +2268,56 @@ attach their passkey to someone else's account. In production, use a maintained 
 SimpleWebAuthn for Node, py_webauthn, webauthn4j or go-webauthn) and store credentials in your database.
 
 Passkeys need a secure context: HTTPS, or `http://localhost` in development. The relying-party ID is your domain.
+
+---
+
+## 28. Preventing duplicate submissions
+
+| Layer | Stops |
+| --- | --- |
+| The form ignores `submit()` while one is running; the submit button shows a spinner and ignores presses | Double clicks, double Enter |
+| **Idempotency keys** (below) | Retries after a lost response (flaky mobile connections) |
+| `once: true` | Submitting the same form again after success |
+| `cooldownMs` | Rapid resubmits after an attempt |
+| Single-use encryption challenges | Replaying an encrypted request |
+| Server uniqueness checks (e.g. unique email) | The same data from two tabs or devices |
+
+### 28.1 Idempotency keys
+
+Each logical submission carries an `Idempotency-Key` header. `form.idempotencyKey` stays the same when the user retries
+the same values, including re-typing passwords after a failed attempt. It changes after the user edits a non-secret
+field, after a successful submit, and after `reset()`. The `action` option sends it automatically. With your own
+`onSubmit`, pass it to `secureSubmit`:
+
+```ts
+onSubmit: async (values, form) => {
+  const body = await form.serialize({ encryptionKey });
+  const res = await secureSubmit('/api/orders', body, { csrfToken, idempotencyKey: form.idempotencyKey });
+  return res.json();
+},
+```
+
+On the server, remember each key, scoped to the session or user, together with a hash of the request body and the
+response:
+
+- **Same key, same body:** return the stored response; don't process again.
+- **Same key, different body:** `422`.
+- **Same key while the first request is still running:** `409` with `Idempotency-Status: in-progress`. The `action`
+  option tells the user to wait.
+- **5xx responses:** don't store them, so the request can be retried.
+
+When hashing the body, treat encrypted `pfe1.…` values as equal, because every envelope is unique even for the same
+password. The reference server implements all of this (`applyIdempotency()` in [server/server.ts](../server/server.ts))
+for registration, OTP and passkey endpoints, and marks replays with `Idempotency-Replayed: true`. Run it **before**
+consuming single-use challenges, so a retried registration gets its original answer.
+
+### 28.2 Form options
+
+```ts
+form: { once: true }          // lock fields and the submit button after success; form.unlock() re-enables
+form: { cooldownMs: 3000 }    // block resubmits for 3 s after an attempt (blocked event, code 'cooldown')
+```
+
+For the two-tabs case, enforce uniqueness where the data lives: a unique email, "one booking per slot", an order
+number, or a database unique constraint.
 

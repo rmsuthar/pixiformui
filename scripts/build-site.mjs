@@ -81,6 +81,7 @@ const CHAPTER_DESCRIPTIONS = {
   "using-pixiform-in-existing-apps-html-react-angular": "Embed PixiFormUI in existing apps: the <pixi-form> web component for HTML, React and Angular wrappers, and mountPixiForm().",
   "analytics": "Privacy-safe form analytics with PixiFormUI: funnels, drop-off fields and error codes for GA4, Tag Manager, Segment and PostHog.",
   "serialization-ajax-and-mcp": "Serialize PixiFormUI forms to JSON with encrypted passwords, submit with AJAX without code, generate JSON Schema, and use MCP.",
+  "preventing-duplicate-submissions": "Stop double submits in PixiFormUI: busy state, idempotency keys for retries after lost responses, once and cooldown options, and server-side uniqueness.",
   "autofill-and-passkeys": "Opt-in browser autofill and password managers for PixiFormUI fields, plus passkey (WebAuthn) sign-up and sign-in with server verification.",
   "events-and-loading": "PixiFormUI events: load lifecycle, change, dirty, validate and cancelable beforesubmit, plus lazy loading with a placeholder state."
 };

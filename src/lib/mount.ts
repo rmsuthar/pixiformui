@@ -528,7 +528,7 @@ async function mountInner(
   form.on('success', (result: SubmitResult) => events.emit('success', { result }));
   form.on('failure', (result: SubmitResult) => events.emit('failure', { result }));
   form.on('invalid', (errors: Record<string, string>) => events.emit('invalid', { errors }));
-  form.on('blocked', (reason: string, code: 'bot' | 'rate_limit') => events.emit('blocked', { reason, code }));
+  form.on('blocked', (reason: string, code: 'bot' | 'rate_limit' | 'cooldown') => events.emit('blocked', { reason, code }));
   form.on('idle', () => events.emit('idle', {}));
   form.on('error', (error: Error) => events.emit('error', { error, phase: 'submit' }));
   form.on('reset', () => {
@@ -733,7 +733,11 @@ export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session
       const send = async () => {
         const key = session?.encryption ?? config.encryptionKey;
         const body = await form.serialize({ encryptionKey: key });
-        return secureSubmit(action, body, { ...(config.submitOptions ?? {}), csrfToken: session?.csrfToken ?? config.csrfToken });
+        return secureSubmit(action, body, {
+          ...(config.submitOptions ?? {}),
+          csrfToken: session?.csrfToken ?? config.csrfToken,
+          idempotencyKey: form.idempotencyKey, // a retry of the same data is processed only once
+        });
       };
       let res = await send();
       if (res.status === 403 && config.session) {
@@ -747,6 +751,9 @@ export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session
         const next = { ...key, challenge: reply.challenge };
         if (session?.encryption) session.encryption = next;
         else config.encryptionKey = next;
+      }
+      if (res.status === 409 && res.headers.get('Idempotency-Status') === 'in-progress') {
+        return { ok: false, message: 'Your previous submission is still being processed. Please wait a moment.' };
       }
       return {
         ok: res.ok && reply.ok !== false,

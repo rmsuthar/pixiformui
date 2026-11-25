@@ -54,7 +54,7 @@ export interface PixiFormEventMap {
   /** Client-side validation failed. */
   invalid: { errors: Record<string, string> };
   /** Rate limit or bot check refused the submit. */
-  blocked: { reason: string; code: 'bot' | 'rate_limit' };
+  blocked: { reason: string; code: 'bot' | 'rate_limit' | 'cooldown' };
   reset: Record<string, never>;
   /** Secrets were wiped after inactivity. */
   idle: Record<string, never>;

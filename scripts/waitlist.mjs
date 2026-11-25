@@ -10,7 +10,7 @@ const outArg = process.argv.indexOf('--out');
 const out = outArg > 0 ? process.argv[outArg + 1] : `waitlist-${new Date().toISOString().slice(0, 10)}.csv`;
 const raw = execFileSync('npx', ['wrangler', 'kv', 'key', 'list', '--binding', 'WAITLIST', '--remote', '--prefix', 'wl:'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
 const keys = JSON.parse(raw.slice(raw.indexOf('[')));
-const cols = ['createdAt', 'updatedAt', 'email', 'name', 'company', 'teamSize', 'interests', 'message', 'source'];
+const cols = ['createdAt', 'updatedAt', 'email', 'name', 'company', 'website', 'teamSize', 'useCase', 'volume', 'current', 'timeline', 'interests', 'message', 'source'];
 const cell = (v) => {
   const s = Array.isArray(v) ? v.join(' ') : v == null ? '' : String(v);
   // Quote everything; neutralise spreadsheet formulas (=, +, -, @ at the start).

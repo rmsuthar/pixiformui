@@ -11,16 +11,26 @@
  * `npm run waitlist` can export everything with one list call.
  */
 import { checkPow, parsePowToken } from '../shared/pow.ts';
+import { confirmationEmail, ownerEmail, sendMail } from './waitlist-email.ts';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, opts?: { expirationTtl?: number; metadata?: unknown }): Promise<void>;
 }
+interface Ctx {
+  waitUntil(p: Promise<unknown>): void;
+}
+
 export interface Env {
   ASSETS: { fetch(req: Request): Promise<Response> };
   WAITLIST: KVNamespace;
   WAITLIST_SECRET: string;
   /** Overrides for tests / tuning. */
+  /** Emails after a sign-up (optional): Resend key (secret), sender, owner address, Cloud link. */
+  RESEND_API_KEY?: string;
+  MAIL_FROM?: string;
+  OWNER_EMAIL?: string;
+  CLOUD_URL?: string;
   POW_DIFFICULTY?: string;
   MIN_FILL_MS?: string;
   RATE_LIMIT?: string;
@@ -32,7 +42,14 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,63}$/;
 const TEAM_SIZES = ['1', '2-10', '11-50', '51-200', '201+'];
 const INTERESTS = { interest_cloud: 'cloud', interest_card: 'card-field', interest_pro: 'pro-controls', interest_enterprise: 'enterprise' } as const;
 const TEXT_FIELDS = { name: 80, company: 120, message: 1000, source: 64 } as const;
-const ALLOWED = new Set(['email', 'teamSize', 'consent', ...Object.keys(INTERESTS), ...Object.keys(TEXT_FIELDS)]);
+/** Optional single-choice answers (values must be one of these). */
+export const CHOICES = {
+  useCase: ['Contact or lead form', 'Sign-up or login', 'Payments or checkout', 'Health, legal or financial data', 'Something else'],
+  volume: ['Under 100', '100–1,000', '1,000–10,000', 'Over 10,000'],
+  current: ['My own backend', 'A form service (Formspree, Typeform, Google Forms…)', 'Nothing yet', 'Something else'],
+  timeline: ['Right away', 'Within a month', 'Within 3 months', 'Just exploring'],
+} as const;
+const ALLOWED = new Set(['email', 'teamSize', 'consent', 'website', ...Object.keys(CHOICES), ...Object.keys(INTERESTS), ...Object.keys(TEXT_FIELDS)]);
 
 const enc = new TextEncoder();
 const b64u = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -99,7 +116,7 @@ async function session(env: Env): Promise<Response> {
   return json(200, { pow: { challenge: await newChallenge(env.WAITLIST_SECRET), difficulty } });
 }
 
-async function join(req: Request, env: Env): Promise<Response> {
+async function join(req: Request, env: Env, ctx: Ctx): Promise<Response> {
   if (req.method !== 'POST') return json(405, { ok: false, message: 'Method not allowed.' }, { Allow: 'POST' });
   if (!sameOrigin(req)) return json(403, { ok: false, message: 'Cross-site request refused.' });
   if (!(req.headers.get('Content-Type') ?? '').startsWith('application/json')) return json(415, { ok: false, message: 'Send JSON.' });
@@ -133,7 +150,7 @@ async function join(req: Request, env: Env): Promise<Response> {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!EMAIL.test(email) || email.length > 254) fieldErrors.email = 'Enter a valid email address.';
   if (body.consent !== true) fieldErrors.consent = 'Please agree so we can email you.';
-  const teamSize = body.teamSize ?? null;
+  const teamSize = body.teamSize == null ? null : String(body.teamSize);
   if (teamSize !== null && !TEAM_SIZES.includes(String(teamSize))) fieldErrors.teamSize = 'Choose a team size.';
   const textValues: Record<string, string> = {};
   for (const [k, max] of Object.entries(TEXT_FIELDS)) {
@@ -143,6 +160,15 @@ async function join(req: Request, env: Env): Promise<Response> {
     else textValues[k] = v.trim();
   }
   for (const k of Object.keys(INTERESTS)) if (body[k] !== undefined && typeof body[k] !== 'boolean') fieldErrors[k] = 'Invalid value.';
+  const choices: Record<string, string | null> = {};
+  for (const [k, list] of Object.entries(CHOICES)) {
+    const v = body[k] ?? null;
+    if (v !== null && !(list as readonly string[]).includes(String(v))) fieldErrors[k] = 'Choose one of the options.';
+    else choices[k] = v as string | null;
+  }
+  let website = typeof body.website === 'string' ? body.website.trim() : body.website == null ? '' : null;
+  if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
+  if (website === null || (website && (website.length > 200 || !/^https?:\/\/[^\s/$.?#][^\s]*$/i.test(website)))) fieldErrors.website = 'Enter your website address, e.g. example.com.';
   if (Object.keys(fieldErrors).length) return json(422, { ok: false, message: 'Please fix the highlighted fields.', fieldErrors });
 
   await env.WAITLIST.put(usedKey, '1', { expirationTtl: CHALLENGE_TTL_S + 60 });
@@ -152,21 +178,33 @@ async function join(req: Request, env: Env): Promise<Response> {
   const record = {
     email,
     ...textValues,
+    website: website || '',
     teamSize,
+    ...choices,
     interests: Object.entries(INTERESTS).filter(([k]) => body[k] === true).map(([, v]) => v),
     createdAt: previous ? (JSON.parse(previous).createdAt ?? now) : now,
     updatedAt: now,
   };
-  // Metadata is capped at 1 KB: keep the record minus the long message there, the full record as the value.
-  await env.WAITLIST.put(key, JSON.stringify(record), { metadata: { ...record, message: (textValues.message ?? '').slice(0, 300) } });
+  // Metadata (what `npm run waitlist` exports in one call) is capped at 1 KB: shorten the message to fit.
+  let meta = { ...record, message: (textValues.message ?? '').slice(0, 300) };
+  while (JSON.stringify(meta).length > 1000 && meta.message) meta = { ...meta, message: meta.message.slice(0, Math.max(0, meta.message.length - 60)) };
+  await env.WAITLIST.put(key, JSON.stringify(record), { metadata: meta });
+
+  // Emails, after the response: a confirmation to them (first sign-up only, so the form can't be used
+  // to flood someone's inbox) and a notification to the owner.
+  const owner = env.OWNER_EMAIL ?? 'ravindra.suthar@me.com';
+  const cloud = env.CLOUD_URL ?? 'https://cloud.pixiformui.lets.gen.in';
+  ctx.waitUntil(
+    Promise.all([previous ? null : sendMail(env, confirmationEmail(record, cloud, owner)), sendMail(env, ownerEmail(record, owner, !!previous))]).catch((err) => console.error('waitlist email failed', err)),
+  );
   return json(200, {
     ok: true,
-    message: previous ? 'You’re already on the list: we’ve updated your details.' : 'You’re on the list! We’ll email you when early access opens.',
+    message: previous ? 'You’re already on the list: we’ve updated your details.' : 'You’re on the list! Check your inbox for a confirmation.',
   });
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: Ctx = { waitUntil: () => {} }): Promise<Response> {
     const path = new URL(req.url).pathname;
     if (path.startsWith('/api/') && (env.WAITLIST_SECRET ?? '').length < 16) {
       console.error('WAITLIST_SECRET is not set');
@@ -174,7 +212,7 @@ export default {
     }
     try {
       if (path === '/api/waitlist/session') return await session(env);
-      if (path === '/api/waitlist') return await join(req, env);
+      if (path === '/api/waitlist') return await join(req, env, ctx);
       if (path.startsWith('/api/')) return json(404, { message: 'Not found.' });
     } catch (err) {
       console.error('waitlist error', err);

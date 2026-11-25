@@ -107,3 +107,66 @@ test('rate limit per IP, and other paths fall through to static files', async ()
   assert.equal(await (await worker.fetch(new Request(`${ORIGIN}/docs/`), env)).text(), 'asset');
   assert.equal((await worker.fetch(new Request(`${ORIGIN}/api/nope`), env)).status, 404);
 });
+
+test('new answers are validated; the website is normalised; long answers still fit the export metadata', async () => {
+  const { env, store } = makeEnv();
+  const bad = await post(env, { ...valid, useCase: 'Spam', website: 'not a url' }, { 'X-Form-Proof': await solved(env) });
+  assert.equal(bad.status, 422);
+  assert.deepEqual(Object.keys(((await bad.json()) as { fieldErrors: object }).fieldErrors).sort(), ['useCase', 'website']);
+  const ok = await post(env, { ...valid, website: 'example.com', useCase: 'Payments or checkout', volume: '1,000–10,000', current: 'Nothing yet', timeline: 'Right away', message: 'x'.repeat(1000), company: 'c'.repeat(120) }, { 'X-Form-Proof': await solved(env) });
+  assert.equal(ok.status, 200);
+  const rec = [...store].find(([k]) => k.startsWith('wl:'))![1];
+  assert.equal(JSON.parse(rec.value).website, 'https://example.com');
+  assert.equal(JSON.parse(rec.value).timeline, 'Right away');
+  assert.ok(JSON.stringify(rec.metadata).length <= 1000);
+});
+
+test('after a sign-up: a confirmation to them (first time only) and a notification to the owner', async () => {
+  const sent: { to: string[]; subject: string; reply_to?: string; html: string }[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === 'https://api.resend.com/emails') sent.push(JSON.parse(String(init?.body)));
+    return new Response('{}');
+  };
+  try {
+    const { env } = makeEnv({ RESEND_API_KEY: 're_test', MAIL_FROM: 'PixiFormUI <hello@pixiformui.lets.gen.in>', OWNER_EMAIL: 'owner@example.com' });
+    const pending: Promise<unknown>[] = [];
+    const ctx = { waitUntil: (p: Promise<unknown>) => void pending.push(p) };
+    const send = async (body: unknown) => {
+      const res = await worker.fetch(new Request(`${ORIGIN}/api/waitlist`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'CF-Connecting-IP': '203.0.113.8', 'X-Form-Proof': await solved(env) }, body: JSON.stringify(body) }), env, ctx);
+      await Promise.all(pending.splice(0));
+      return res;
+    };
+    await send({ ...valid, company: 'Engines <b>Ltd</b>' });
+    assert.deepEqual(sent.map((m) => [m.to[0], m.subject]), [
+      ['ada@example.com', 'You’re on the PixiFormUI Pro & Cloud waitlist'],
+      ['owner@example.com', 'New waitlist sign-up: Engines <b>Ltd</b>'],
+    ]);
+    assert.equal(sent[0].reply_to, 'owner@example.com'); // replies reach the owner
+    assert.equal(sent[1].reply_to, 'ada@example.com'); // the owner can answer them directly
+    assert.ok(sent[0].html.includes('https://cloud.pixiformui.lets.gen.in'));
+    assert.ok(sent[1].html.includes('Engines &lt;b&gt;Ltd&lt;/b&gt;') && !sent[1].html.includes('<b>Ltd'));
+    sent.length = 0;
+    await send({ ...valid, company: 'Engines Ltd' }); // the same address again
+    assert.deepEqual(sent.map((m) => [m.to[0], m.subject]), [['owner@example.com', 'Waitlist sign-up updated: Engines Ltd']]); // no second confirmation
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('without a Resend key, sign-ups are stored and no email is attempted', async () => {
+  let calls = 0;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => (calls++, new Response('{}'));
+  try {
+    const { env, store } = makeEnv();
+    const pending: Promise<unknown>[] = [];
+    const res = await worker.fetch(new Request(`${ORIGIN}/api/waitlist`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'X-Form-Proof': await solved(env) }, body: JSON.stringify(valid) }), env, { waitUntil: (p) => void pending.push(p) });
+    await Promise.all(pending);
+    assert.equal(res.status, 200);
+    assert.ok([...store.keys()].some((k) => k.startsWith('wl:')));
+    assert.equal(calls, 0);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

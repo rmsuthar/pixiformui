@@ -22,5 +22,12 @@
   "observability": { "enabled": true },
   // Waitlist sign-ups. The HMAC key for proof-of-work challenges is a secret:
   //   openssl rand -base64 32 | npx wrangler secret put WAITLIST_SECRET
-  "kv_namespaces": [{ "binding": "WAITLIST", "id": "2c8c8a2e0f884d9aa67708065b32dbd9" }]
+  "kv_namespaces": [{ "binding": "WAITLIST", "id": "2c8c8a2e0f884d9aa67708065b32dbd9" }],
+  // Waitlist emails (confirmation + owner notification). The Resend key is a secret:
+  //   npx wrangler secret put RESEND_API_KEY      (without it, sign-ups are stored and no email is sent)
+  "vars": {
+    "MAIL_FROM": "PixiFormUI <hello@pixiformui.lets.gen.in>",
+    "OWNER_EMAIL": "ravindra.suthar@me.com",
+    "CLOUD_URL": "https://cloud.pixiformui.lets.gen.in"
+  }
 }

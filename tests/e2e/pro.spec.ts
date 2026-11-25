@@ -60,7 +60,7 @@ test('pro page: joining the waitlist stores the sign-up; the form locks afterwar
   await focusField(page, 'Email me about PixiFormUI Pro and Cloud');
   await page.keyboard.press(' ');
   await page.waitForTimeout(1800); // minimum fill time
-  const [res] = await Promise.all([page.waitForResponse('**/api/waitlist'), (async () => { await focusField(page, 'Join the waitlist'); await page.keyboard.press('Enter'); })()]);
+  const [res] = await Promise.all([page.waitForResponse('**/api/waitlist'), (async () => { await focusField(page, 'Get early access'); await page.keyboard.press('Enter'); })()]);
   expect(res.status()).toBe(200);
   const rec = JSON.parse([...store].find(([k]) => k.startsWith('wl:'))![1].value);
   expect(rec).toMatchObject({ email: 'grace@navy.example', company: 'Remington Rand', source: 'newsletter', interests: ['card-field'] });
@@ -69,6 +69,6 @@ test('pro page: joining the waitlist stores the sign-up; the form locks afterwar
   const dom = await page.evaluate(() => document.documentElement.outerHTML + [...document.querySelectorAll('input, textarea')].map((i) => (i as HTMLInputElement).value).join(' '));
   expect(dom).not.toContain('grace@navy.example');
   expect(dom).not.toContain('Remington Rand');
-  await expect(page.locator('.pixiform-a11y [aria-label^="Join the waitlist"]')).toHaveAttribute('aria-disabled', 'true'); // once: true
+  await expect(page.locator('.pixiform-a11y [aria-label^="Get early access"]')).toHaveAttribute('aria-disabled', 'true'); // once: true
   expect(errors).toEqual([]);
 });

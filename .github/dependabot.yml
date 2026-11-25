@@ -7,8 +7,11 @@ updates:
       interval: monthly
     open-pull-requests-limit: 5
     groups:
+      # Minor and patch updates arrive together; each major upgrade (TypeScript, Vite…) gets its own pull
+      # request so it can be tested on its own (build output and bundle sizes can change).
       dev-dependencies:
         dependency-type: development
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:

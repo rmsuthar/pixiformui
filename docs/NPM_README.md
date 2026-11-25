@@ -11,7 +11,7 @@ wipeable memory, not in the page DOM. Browser extensions, session-replay scripts
 - 📊 Privacy-safe analytics (GA4, Tag Manager, Segment, PostHog…) and typed lifecycle/form events
 - 📱 Mobile keyboards, SMS code autofill, touch scrolling
 - 🧩 `<pixi-form>` web component, React and Angular wrappers, or `mountPixiForm()` anywhere
-- 📦 ≈57 KB gzipped, **zero dependencies**, runs under a strict CSP (no `unsafe-eval`, no workers)
+- 📦 ≈__PIXIFORM_SIZE_KB__ KB gzipped, **zero dependencies**, runs under a strict CSP (no `unsafe-eval`, no workers)
 
 **Docs and live demo:** https://pixiformui.lets.gen.in · **Source:** https://github.com/rmsuthar/pixiformui
 

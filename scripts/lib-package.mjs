@@ -2,6 +2,7 @@
 //   npm run build:lib && cd dist-lib && npm publish
 // REPO_URL overrides the repository link (default: the public GitHub repository).
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 const root = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const repo = (process.env.REPO_URL ?? 'https://github.com/rmsuthar/pixiformui').replace(/\/+$/, '');
 const pkg = {
@@ -34,6 +35,8 @@ const pkg = {
 };
 const out = (f) => new URL(`../dist-lib/${f}`, import.meta.url);
 writeFileSync(out('package.json'), JSON.stringify(pkg, null, 2) + '\n');
-copyFileSync(new URL('../docs/NPM_README.md', import.meta.url), out('README.md'));
+// The README quotes the standalone bundle's gzipped size, measured now so it never goes stale.
+const sizeKb = Math.round(gzipSync(readFileSync(out('pixiformui.standalone.js'))).length / 1024);
+writeFileSync(out('README.md'), readFileSync(new URL('../docs/NPM_README.md', import.meta.url), 'utf8').replaceAll('__PIXIFORM_SIZE_KB__', String(sizeKb)));
 copyFileSync(new URL('../LICENSE', import.meta.url), out('LICENSE'));
 console.log(`dist-lib ready: ${pkg.name}@${pkg.version}`);

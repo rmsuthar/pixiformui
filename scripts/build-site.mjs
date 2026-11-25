@@ -341,7 +341,8 @@ console.log(`install page + /v/${version}/ downloads`);
 // Header version badge on the Vite-built pages (home, 404).
 for (const f of ['index.html', '404.html', 'playground/index.html', 'pro/index.html']) {
   const file = join(out, f);
-  writeFileSync(file, readFileSync(file, 'utf8').replaceAll('__PIXIFORM_VERSION__', version));
+  // The size quoted on the home page is measured from the standalone bundle on every build.
+  writeFileSync(file, readFileSync(file, 'utf8').replaceAll('__PIXIFORM_VERSION__', version).replaceAll('__PIXIFORM_SIZE_KB__', String(standalone.kb)));
 }
 
 // ------------------------------------------------------------------ release notes (from CHANGELOG.md)

@@ -1,0 +1,22 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server/server.mjs --dev",
+    "build": "tsc && vite build",
+    "start": "NODE_ENV=production node server/server.mjs",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "pixiformui": "{{pixiformuiVersion}}"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

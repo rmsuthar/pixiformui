@@ -10,6 +10,9 @@
 - **Hidden fields:** `{ type: 'hidden', name, value }` (`HiddenField`) submits a value that is never drawn and isn't
   in the page's markup.
 - The human-check slider keeps its prompt text clear of the mark.
+- **`npm create pixiformui`** (new package `create-pixiformui`): scaffolds a vanilla TypeScript or React app with a
+  demo form and a dependency-free Node server (CSRF, encrypted passwords, proof-of-work, idempotency, and validation
+  with the same field definitions and showIf rules as the browser).
 
 ## 0.1.6
 

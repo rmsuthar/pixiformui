@@ -1,0 +1,28 @@
+{
+  "name": "create-pixiformui",
+  "version": "0.1.6",
+  "description": "Start a PixiFormUI app: a demo form and a secure Node server (CSRF, encrypted passwords, proof-of-work, idempotency, shared validation)",
+  "keywords": ["pixiformui", "create", "scaffold", "starter", "template", "form", "secure", "vite", "react"],
+  "type": "module",
+  "bin": {
+    "create-pixiformui": "index.mjs"
+  },
+  "files": ["index.mjs", "templates", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://pixiformui.lets.gen.in",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmsuthar/pixiformui.git",
+    "directory": "packages/create-pixiformui"
+  },
+  "bugs": {
+    "url": "https://github.com/rmsuthar/pixiformui/issues"
+  },
+  "license": "MIT",
+  "author": "Ravindrakumar Suthar <ravindra.suthar@me.com> (https://www.linkedin.com/in/ravindrasuthar/)",
+  "publishConfig": {
+    "access": "public"
+  }
+}

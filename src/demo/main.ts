@@ -20,6 +20,7 @@ import {
   ScrollView,
   Select,
   Slider,
+  HumanCheck,
   StrengthMeter,
   Switch,
   TextArea,
@@ -42,6 +43,8 @@ import {
   passkeyErrorMessage,
   passkeysSupported,
   type PasskeyAuthenticationJSON,
+  FormProof,
+  type PowChallenge,
 } from '../lib';
 import { Formatters } from '../lib/security/formatters';
 import { COUNTRIES, COUNTRY_NAMES, OTP_LENGTH, otpRules, registrationRules as R } from '../../shared/rules.ts';
@@ -157,6 +160,8 @@ async function main(): Promise<void> {
     ...fromRule(R, 'terms'),
     info: 'Summary: we store only what is needed to run your account, and you can export or delete it at any time.',
   });
+  // Client-side human check: drag the handle onto a randomly placed mark (the server relies on the form proof).
+  const human = new HumanCheck(ui, { name: 'human', label: 'Quick check', info: 'Stops simple bots. Keyboard: arrow keys, then Enter when you hear "at the mark".' });
 
   // ------------------------------------------------------------ groups (fieldsets)
   const accountGroup = new FieldGroup(ui, {
@@ -188,6 +193,8 @@ async function main(): Promise<void> {
 
   // ------------------------------------------------------------ form + server submit
   let session = await fetchSession();
+  // Invisible bot defence: solve the server's proof-of-work in the background while the person types.
+  const proof = new FormProof(session.pow).start();
   const toast = new Toast(ui);
 
   const form = new Form(ui, {
@@ -214,21 +221,23 @@ async function main(): Promise<void> {
             password: pw.isEmpty ? '' : await sealSecret(pw, key, 'password'),
             confirmPassword: cf.isEmpty ? '' : await sealSecret(cf, key, 'confirmPassword'),
           },
-          { csrfToken: session.csrfToken, idempotencyKey: form.idempotencyKey },
+          { csrfToken: session.csrfToken, idempotencyKey: form.idempotencyKey, proof: await proof.token() },
         );
       };
       let res = await send();
       if (res.status === 403) {
         session = await fetchSession(); // session expired: refresh token + key once
+        proof.update(session.pow);
         res = await send();
       }
-      const body = (await res.json().catch(() => ({}))) as SubmitResult & { challenge?: string };
+      const body = (await res.json().catch(() => ({}))) as SubmitResult & { challenge?: string; pow?: PowChallenge };
       // Each challenge is single-use; the server sends the next one with every reply.
       if (body.challenge && session.encryption) session.encryption = { ...session.encryption, challenge: body.challenge };
+      proof.update(body.pow);
       return { ok: res.ok && body.ok !== false, message: body.message, fieldErrors: body.fieldErrors };
     },
   });
-  form.add(fullName, username, email, password, confirm, phone, country, dateOfBirth, onboardingCall, plan, experience, bio, newsletter, terms);
+  form.add(fullName, username, email, password, confirm, phone, country, dateOfBirth, onboardingCall, plan, experience, bio, newsletter, terms, human);
   form.bindSubmit(submitBtn);
 
   // Privacy-safe analytics: metadata only, never values. In production pass an adapter,
@@ -278,7 +287,19 @@ async function main(): Promise<void> {
     return { res, body: (await res.json().catch(() => ({}))) as SubmitResult };
   };
   sendCode.onPress = async () => {
-    const { res, body } = await postJson('/api/otp/send', {});
+    // Sending a code costs money, so the server requires the form proof here too.
+    const sendOtp = async () => {
+      let r = await secureSubmit('/api/otp/send', {}, { csrfToken: session.csrfToken, proof: await proof.token() });
+      if (r.status === 403) {
+        session = await fetchSession();
+        proof.update(session.pow);
+        r = await secureSubmit('/api/otp/send', {}, { csrfToken: session.csrfToken, proof: await proof.token() });
+      }
+      const b = (await r.json().catch(() => ({}))) as SubmitResult & { pow?: PowChallenge };
+      proof.update(b.pow);
+      return { res: r, body: b };
+    };
+    const { res, body } = await sendOtp();
     toast.show(body.message ?? (res.ok ? 'Code sent.' : 'Could not send a code.'), res.ok ? 'info' : 'error', 6000);
     if (res.ok) {
       otp.clear();
@@ -327,6 +348,7 @@ async function main(): Promise<void> {
         aboutGroup,
         prefsGroup,
         terms,
+        human,
         Column.spacer(4),
         new Row([resetBtn, submitBtn], 12, 0),
         new Label(
@@ -479,18 +501,21 @@ async function main(): Promise<void> {
 interface SessionInfo {
   csrfToken: string | null;
   encryption: EncryptionKey | null;
+  /** Proof-of-work challenge (bot defence), if the server requires one. */
+  pow?: PowChallenge | null;
 }
 
 async function fetchSession(): Promise<SessionInfo> {
   try {
     const r = await fetch('/api/session', { credentials: 'same-origin', cache: 'no-store' });
     if (!r.ok) return { csrfToken: null, encryption: null };
-    const j = (await r.json()) as { csrfToken?: unknown; encryption?: Partial<EncryptionKey> };
+    const j = (await r.json()) as { csrfToken?: unknown; encryption?: Partial<EncryptionKey>; pow?: PowChallenge };
     const e = j.encryption;
     const valid = e && e.alg === 'PFE1' && typeof e.kid === 'string' && typeof e.spki === 'string' && typeof e.challenge === 'string';
     return {
       csrfToken: typeof j.csrfToken === 'string' ? j.csrfToken : null,
       encryption: valid ? (e as EncryptionKey) : null,
+      pow: j.pow && typeof j.pow.challenge === 'string' && typeof j.pow.difficulty === 'number' ? j.pow : null,
     };
   } catch {
     return { csrfToken: null, encryption: null };

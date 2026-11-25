@@ -27,6 +27,7 @@ import { PasswordInput, type PasswordInputOptions } from './controls/PasswordInp
 import { RadioGroup, type RadioGroupOptions } from './controls/RadioGroup';
 import { Select, type SelectOptions } from './controls/Select';
 import { Slider, type SliderOptions } from './controls/Slider';
+import { HumanCheck, type HumanCheckOptions } from './controls/HumanCheck';
 import { Switch, type SwitchOptions } from './controls/Switch';
 import { TextArea, TextInput, type TextAreaOptions, type TextInputOptions } from './controls/TextInput';
 import type { Control } from './core/Control';
@@ -48,6 +49,7 @@ import { Column, Row, ScrollView, type Layoutable } from './layout';
 import type { Secret } from './security/Secret';
 import type { EncryptionKey } from './security/envelope';
 import { secureSubmit, type SecureSubmitOptions } from './security/secureSubmit';
+import { FormProof, type PowChallenge } from './security/proof';
 import { Formatters } from './security/formatters';
 import {
   accentPalettes,
@@ -77,6 +79,7 @@ export type FieldConfig =
   | WithRow<{ type: 'radio' } & RadioGroupOptions<string>>
   | WithRow<{ type: 'select' } & SelectOptions<string>>
   | WithRow<{ type: 'slider' } & SliderOptions>
+  | WithRow<{ type: 'humancheck' } & HumanCheckOptions>
   | WithRow<{ type: 'date' } & DatePickerOptions>
   | WithRow<{ type: 'phone' } & PhoneInputOptions>
   | WithRow<{ type: 'heading' | 'paragraph'; text: string }>
@@ -113,6 +116,11 @@ export interface PixiFormConfig {
   encryptionKey?: EncryptionKey;
   /** Extra secureSubmit options for `action` (headers, allowedOrigins, timeoutMs). */
   submitOptions?: Omit<SecureSubmitOptions, 'csrfToken'>;
+  /**
+   * Optional CAPTCHA for `action` submits: return a fresh token from Turnstile, hCaptcha… (it's
+   * sent as X-Captcha-Token for your server to verify). The library loads no third-party script.
+   */
+  captcha?: () => Promise<string>;
   title?: string;
   subtitle?: string;
   submitText?: string;
@@ -392,6 +400,9 @@ async function mountInner(
         case 'slider':
           c = new Slider(ui, opts as unknown as SliderOptions);
           break;
+        case 'humancheck':
+          c = new HumanCheck(ui, opts as unknown as HumanCheckOptions);
+          break;
         case 'date':
           c = new DatePicker(ui, opts as unknown as DatePickerOptions);
           break;
@@ -418,7 +429,9 @@ async function mountInner(
   const resetBtn = config.resetText ? new Button(ui, { name: 'pixiformReset', text: config.resetText, variant: 'outline' }) : null;
   items.push(resetBtn ? new Row([resetBtn, submitBtn], 12, 0) : submitBtn);
 
-  const form = new Form(ui, { ...(config.form ?? {}), onSubmit: config.onSubmit ?? actionSubmitter(config) });
+  const submitter = config.onSubmit ? null : actionSubmitter(config);
+  const form = new Form(ui, { ...(config.form ?? {}), onSubmit: config.onSubmit ?? submitter! });
+  submitter?.prefetch();
   form.add(...Object.values(controls)).bindSubmit(submitBtn);
   const toast = new Toast(ui);
   const showToasts = config.toasts ?? true;
@@ -716,20 +729,27 @@ class Surface extends Container implements Layoutable {
 interface SessionInfo {
   csrfToken?: string;
   encryption?: EncryptionKey;
+  pow?: PowChallenge;
 }
 
 /** Builds an onSubmit that serializes, encrypts secrets and POSTs to `config.action`. */
-export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session' | 'csrfToken' | 'encryptionKey' | 'submitOptions'>): FormOptions['onSubmit'] {
+export function actionSubmitter(
+  config: Pick<PixiFormConfig, 'action' | 'session' | 'csrfToken' | 'encryptionKey' | 'submitOptions' | 'captcha'>,
+): FormOptions['onSubmit'] & { prefetch: () => void } {
   const action = config.action!;
   let session: SessionInfo | null = null;
-  const loadSession = async () => {
-    const res = await fetch(config.session!, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`session request failed (${res.status})`);
-    session = (await res.json()) as SessionInfo;
-  };
-  return async (_values, form): Promise<SubmitResult> => {
+  let loading: Promise<void> | null = null;
+  const proof = new FormProof();
+  const loadSession = () =>
+    (loading = (async () => {
+      const res = await fetch(config.session!, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`session request failed (${res.status})`);
+      session = (await res.json()) as SessionInfo;
+      proof.update(session.pow); // start the invisible proof-of-work while the person types
+    })());
+  const submit = async (_values: FormValues, form: Form): Promise<SubmitResult> => {
     try {
-      if (config.session && !session) await loadSession();
+      if (config.session && !session) await (loading ?? loadSession()).catch(() => loadSession());
       const send = async () => {
         const key = session?.encryption ?? config.encryptionKey;
         const body = await form.serialize({ encryptionKey: key });
@@ -737,6 +757,8 @@ export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session
           ...(config.submitOptions ?? {}),
           csrfToken: session?.csrfToken ?? config.csrfToken,
           idempotencyKey: form.idempotencyKey, // a retry of the same data is processed only once
+          proof: await proof.token(), // '' when the server doesn't ask for one
+          captchaToken: config.captcha ? await config.captcha() : undefined,
         });
       };
       let res = await send();
@@ -744,7 +766,8 @@ export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session
         await loadSession(); // expired session: new CSRF token + key, then retry once
         res = await send();
       }
-      const reply = (await res.json().catch(() => ({}))) as SubmitResult & { challenge?: string };
+      const reply = (await res.json().catch(() => ({}))) as SubmitResult & { challenge?: string; pow?: PowChallenge };
+      proof.update(reply.pow); // the server rotates the proof challenge after use
       // PFE1 challenges are single-use; the server sends the next one with each reply.
       const key = session?.encryption ?? config.encryptionKey;
       if (reply.challenge && key) {
@@ -765,4 +788,9 @@ export function actionSubmitter(config: Pick<PixiFormConfig, 'action' | 'session
       return { ok: false, message: 'Could not send the form. Please try again.' };
     }
   };
+  /** Fetch the session (and start the proof-of-work) as soon as the form loads. */
+  const prefetch = () => {
+    if (config.session && !session && !loading) void loadSession().catch(() => (loading = null));
+  };
+  return Object.assign(submit, { prefetch });
 }

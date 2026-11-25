@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { focusField, mountElement } from './helpers';
+import { focusField, mountElement, solveHumanCheck } from './helpers';
 
 async function fillRegistration(page: Page, id: string) {
   const type = async (label: string, text: string) => {
@@ -21,6 +21,7 @@ async function fillRegistration(page: Page, id: string) {
   await page.keyboard.press('Enter');
   await focusField(page, 'I agree to the Terms of Service and Privacy Policy');
   await page.keyboard.press(' ');
+  await solveHumanCheck(page);
 }
 
 test('a retry after a lost response is processed once: the original 201 is replayed', async ({ page }) => {
@@ -68,8 +69,12 @@ test('server: same key + same data replays; same key + different data is rejecte
   await page.goto('/');
   const r = await page.evaluate(async () => {
     const s = await (await fetch('/api/session')).json();
+    // Sending a code requires the form proof (bot defence): solve the session's challenge first.
+    const path = '/src/lib/index.ts';
+    const { FormProof } = await import(/* @vite-ignore */ path);
+    const proof = await new FormProof(s.pow).token();
     const post = (body: string, key: string) =>
-      fetch('/api/otp/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': s.csrfToken, 'Idempotency-Key': key }, body });
+      fetch('/api/otp/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': s.csrfToken, 'Idempotency-Key': key, 'X-Form-Proof': proof }, body });
     const key = crypto.randomUUID();
     const a = await post('{}', key);
     const b = await post('{}', key);

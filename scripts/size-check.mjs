@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 
 const BUDGETS = {
-  'dist-lib/pixiformui.standalone.js': 64 * 1024, // everything, minified (≈58 KB today)
-  'dist-lib/pixiformui.js': 84 * 1024, // ES module, unminified with comments; apps minify it (≈77 KB today)
+  'dist-lib/pixiformui.standalone.js': 68 * 1024, // everything, minified (≈64 KB in 0.1.6: + proof-of-work, human check)
+  'dist-lib/pixiformui.js': 88 * 1024, // ES module, unminified with comments; apps minify it (≈84 KB in 0.1.6)
 };
 let failed = false;
 for (const [file, budget] of Object.entries(BUDGETS)) {

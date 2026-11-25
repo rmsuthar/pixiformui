@@ -82,6 +82,7 @@ const CHAPTER_DESCRIPTIONS = {
   "analytics": "Privacy-safe form analytics with PixiFormUI: funnels, drop-off fields and error codes for GA4, Tag Manager, Segment and PostHog.",
   "serialization-ajax-and-mcp": "Serialize PixiFormUI forms to JSON with encrypted passwords, submit with AJAX without code, generate JSON Schema, and use MCP.",
   "preventing-duplicate-submissions": "Stop double submits in PixiFormUI: busy state, idempotency keys for retries after lost responses, once and cooldown options, and server-side uniqueness.",
+  "protecting-forms-from-bots": "Protect PixiFormUI forms from bots: invisible proof-of-work, a server-side timing check, Turnstile or hCaptcha, and a slide-to-the-mark human check.",
   "autofill-and-passkeys": "Opt-in browser autofill and password managers for PixiFormUI fields, plus passkey (WebAuthn) sign-up and sign-in with server verification.",
   "events-and-loading": "PixiFormUI events: load lifecycle, change, dirty, validate and cancelable beforesubmit, plus lazy loading with a placeholder state."
 };

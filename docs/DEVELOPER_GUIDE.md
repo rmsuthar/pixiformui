@@ -39,6 +39,7 @@ reference server. This guide covers everything you need to build, style, extend,
 26. [Events and loading](#26-events-and-loading)
 27. [Autofill and passkeys](#27-autofill-and-passkeys)
 28. [Preventing duplicate submissions](#28-preventing-duplicate-submissions)
+29. [Protecting forms from bots](#29-protecting-forms-from-bots)
 
 ---
 
@@ -1590,7 +1591,7 @@ request.postData() // contains "pfe1." and not the plaintext
 - [ ] Set `PASSWORD_PEPPER` from a secrets manager; **never** store it in the database.
 - [ ] Replace the in-memory user store, sessions and rate-limit buckets with persistent and shared stores.
 - [ ] Add your domain to `ALLOWED_HOSTS` (edit `server.ts` or use `EXTRA_ALLOWED_HOSTS`).
-- [ ] Add a CAPTCHA/Turnstile to registration and sign-in.
+- [ ] Keep the form proof on (`POW_DIFFICULTY`, default 18) and set `TURNSTILE_SECRET` or `HCAPTCHA_SECRET` for registration and sign-in (chapter 29).
 - [ ] Check that the CSP is delivered as a response header (frame protection doesn't work from `<meta>`).
 - [ ] Run `npm test`, `npm run test:pfe` and the manual QA checklist.
 - [ ] Plan key rotation (see `docs/ENCRYPTION.md`) and log monitoring that never records request bodies.
@@ -2321,3 +2322,112 @@ form: { cooldownMs: 3000 }    // block resubmits for 3 s after an attempt (block
 For the two-tabs case, enforce uniqueness where the data lives: a unique email, "one booking per slot", an order
 number, or a database unique constraint.
 
+
+---
+
+## 29. Protecting forms from bots
+
+No single check stops every bot. PixiFormUI stacks cheap, invisible layers and lets you add a CAPTCHA where the risk
+justifies it. Anything that runs only in the browser can be skipped by a bot that posts to your API directly, so the
+layers that matter most are the ones your **server** enforces.
+
+| Layer | Where it's enforced | Stops | Cost to people |
+| --- | --- | --- | --- |
+| Canvas rendering (no `<input>` to fill) | Browser | Scripts that fill DOM inputs | None |
+| `botGuard` (minimum fill time, trusted interactions) | Browser | Naive scripted submits | None |
+| **Human check** slider (29.3) | Browser | Simple bots, form-filling scripts | One drag |
+| **Form proof** (proof-of-work, 29.1) | Server | Bulk submissions: each one costs CPU time | Invisible (solved while typing) |
+| **Timing check** (29.1) | Server | Submits seconds after the session starts | None |
+| Rate limits, CSRF, single-use challenges | Server | Floods, cross-site posts, replays | None |
+| **Turnstile / hCaptcha** (29.2) | Server | Most automated traffic, including headless browsers | Usually invisible |
+
+### 29.1 Form proof and timing check
+
+The server issues a random challenge with each session (`/api/session` returns `pow: { challenge, difficulty }`).
+The browser finds a number such that SHA-256(`challenge:number`) starts with `difficulty` zero bits and sends
+`X-Form-Proof: challenge:number`. Checking takes the server one hash; producing it takes the browser a fraction of a
+second at the default difficulty of 18. The page solves it in short slices while the person types, so they never
+wait, but a bot sending thousands of submissions pays for every one. Challenges are single use: the server sends the
+next one with each reply.
+
+The `action` option does all of this for you. With your own `onSubmit`:
+
+```ts
+import { FormProof, secureSubmit } from 'pixiformui';
+
+const session = await (await fetch('/api/session')).json();
+const proof = new FormProof(session.pow).start(); // starts solving in the background
+
+onSubmit: async (values, form) => {
+  const res = await secureSubmit('/api/register', await form.serialize({ encryptionKey }), {
+    csrfToken: session.csrfToken,
+    proof: await proof.token(), // waits only if it isn't solved yet
+  });
+  const body = await res.json();
+  proof.update(body.pow); // next challenge
+  return body;
+},
+```
+
+Verifying on your server (see `proofOk()` in [server/server.ts](../server/server.ts)): parse the header with
+`parsePowToken()` from `shared/pow.ts`, check that the challenge is the one stored in the session, hash
+`challenge:nonce` and count leading zero bits. Issue a new challenge after each successful use.
+
+The reference server also refuses a registration sent less than `MIN_FILL_MS` (default 2 000 ms) after the session
+was created. Both settings are environment variables:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `POW_DIFFICULTY` | `18` | Leading zero bits (each +1 doubles the work; `0` turns the proof off). 18 takes roughly 0.1–1 s on a phone. |
+| `MIN_FILL_MS` | `2000` | Minimum time between session start and a registration. |
+
+### 29.2 Turnstile or hCaptcha
+
+For sign-up and sign-in pages that attract real abuse, add a CAPTCHA. Set `TURNSTILE_SECRET` (Cloudflare Turnstile)
+or `HCAPTCHA_SECRET` on the server; it then requires an `X-Captcha-Token` header on registration and verifies it with
+the provider, failing closed if the provider can't be reached. In the browser, render the provider's widget next to
+the form and hand its token to PixiFormUI:
+
+```ts
+mountPixiForm(host, {
+  action: '/api/register',
+  session: '/api/session',
+  captcha: () => getTurnstileToken(), // your function returning the widget's current token
+  fields: [/* … */],
+});
+// With your own onSubmit: secureSubmit(url, body, { csrfToken, proof, captchaToken })
+```
+
+The widget loads the provider's script and iframe, so add its origin to your CSP (for Turnstile:
+`script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com`).
+
+### 29.3 Human check slider
+
+A "slide to the mark" control: a mark sits at a random spot on the track and the person drags the handle onto it.
+
+```ts
+{ type: 'humancheck', name: 'human', label: 'Quick check' }
+// or: form.add(new HumanCheck(ui, { name: 'human' }))
+```
+
+- The mark's position comes from `crypto.getRandomValues` and is drawn only on the canvas. It isn't in the DOM, the
+  accessibility outline or the form's values.
+- A release only counts when the browser marks the events as **trusted** (events dispatched by page scripts are
+  refused), the handle was grabbed (clicking the mark does nothing), and the drag looks like a person's: it takes some
+  time, its steps vary and it slows down near the mark.
+- A wrong release shakes the handle and moves the mark. After `maxAttempts` (3) wrong releases the check pauses for
+  `cooldownMs` (15 s). The error message is the same for every reason, so a bot can't learn which test it failed.
+- A solved check expires after `expiresMs` (2 minutes). It is always required, so the form won't submit until it's
+  solved.
+- Keyboard: Tab to it, use the arrow keys, then press Enter. Screen-reader users can't see the mark, so by default the
+  accessible value says "at the mark" while the handle is on it during keyboard use. Set `accessibleHint: false` for a
+  stricter check, knowing that blind users then can't complete it; offer them another route.
+
+Options: `prompt`, `maxAttempts`, `cooldownMs`, `expiresMs`, `accessibleHint`, plus the usual `label`, `helperText`,
+`info` and `disabled`.
+
+**What it can't do.** The check runs entirely in the browser, and its result isn't sent to your server (`submits`
+is `false`), because a client-side result proves nothing to a server. It raises the bar for simple bots and for
+scripts that fill forms through the page. It won't stop a bot that drives a real browser with realistic mouse
+movement, reads the mark from the canvas pixels, or skips the page and posts to your API directly. Use it alongside
+the form proof and timing check, and add Turnstile or hCaptcha where abuse is costly.

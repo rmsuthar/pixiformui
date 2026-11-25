@@ -14,7 +14,7 @@ npm install pixiformui
 
 Docs, live demo and downloads: **https://pixiformui.lets.gen.in** · Source: **https://github.com/rmsuthar/pixiformui** · MIT licence
 
-- Controls: `TextInput`, `TextArea`, `PasswordInput`, `OtpInput`, `DatePicker` (calendar, optional time), `PhoneInput` (country code, E.164), `Checkbox`, `Switch`, `RadioGroup`, `Select`, `Slider`, `Button`, each with an optional ⓘ `info` tooltip
+- Controls: `TextInput`, `TextArea`, `PasswordInput`, `OtpInput`, `DatePicker` (calendar, optional time), `PhoneInput` (country code, E.164), `Checkbox`, `Switch`, `RadioGroup`, `Select`, `Slider`, `HumanCheck` (slide-to-the-mark), `Button`, each with an optional ⓘ `info` tooltip
 - Palette theming: `createFormTheme({ theme, text, accent })` derives every token; six presets; WCAG contrast checks
 - Widgets: `Label`, `StrengthMeter`, `Toast`, `PrivacyScreen`; layout: `Column`, `Row`, `ScrollView`, `FieldGroup` (titled, collapsible sections)
 - `Form`: validation, autovalidate modes, bot heuristics, rate limiting, idle wipe of secrets
@@ -24,6 +24,7 @@ Docs, live demo and downloads: **https://pixiformui.lets.gen.in** · Source: **h
 - MCP: `npm run mcp` starts an MCP server whose tools let an AI assistant validate and prefill a registration; the person finishes it (password, terms) in the secure form via a single-use link
 - Events: typed lifecycle and form events (`load`, `change`, `dirty`, `beforesubmit` (cancelable), `success`…) via `config.on`, `handle.on()` or `pixiform-*` DOM events; `load: 'visible' | 'idle'` lazy mounting with a `data-pixiform-state` attribute for placeholders
 - Autofill and passkeys: opt-in `autocomplete` per field for browser autofill and password managers; `createPasskey()` / `getPasskey()` helpers (with passkey suggestions) and a server-side WebAuthn verifier
+- Bot and duplicate protection: invisible proof-of-work checked by the server, a timing check, optional Turnstile/hCaptcha, a slide-to-the-mark human check, idempotency keys, `once` and `cooldownMs`
 - Shared rules (`shared/rules.ts`) used by **both** the browser and the bundled Node server
 
 > 📘 **Full documentation:** [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) covers setup, every control, theming, extending, rules, server, encryption, mobile, testing and deployment. The encryption protocol spec is in [docs/ENCRYPTION.md](docs/ENCRYPTION.md).

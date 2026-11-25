@@ -12,6 +12,10 @@ export interface SecureSubmitOptions {
    * (e.g. after a lost response). Use `form.idempotencyKey` inside onSubmit.
    */
   idempotencyKey?: string;
+  /** Proof-of-work token from FormProof.token(), sent as `X-Form-Proof`. */
+  proof?: string;
+  /** CAPTCHA token (Turnstile, hCaptcha…), sent as `X-Captcha-Token` for server-side verification. */
+  captchaToken?: string;
 }
 
 export function readCsrfToken(): string | null {
@@ -43,6 +47,8 @@ export async function secureSubmit(url: string, body: unknown, opts: SecureSubmi
     if (!/^[A-Za-z0-9_-]{8,128}$/.test(opts.idempotencyKey)) throw new Error('Invalid idempotency key');
     headers['Idempotency-Key'] = opts.idempotencyKey;
   }
+  if (opts.proof) headers['X-Form-Proof'] = opts.proof.slice(0, 200);
+  if (opts.captchaToken) headers['X-Captcha-Token'] = opts.captchaToken.slice(0, 4096);
   const token = opts.csrfToken === undefined ? readCsrfToken() : opts.csrfToken;
   if (token) headers[opts.csrfHeader ?? 'X-CSRF-Token'] = token;
 

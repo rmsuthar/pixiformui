@@ -44,3 +44,17 @@ export async function mountElement(page: Page, config: string, id = 'f'): Promis
     { config, id },
   );
 }
+
+/** Solves a human check with the keyboard: arrows until the screen-reader hint says "at the mark", then Enter. */
+export async function solveHumanCheck(page: Page, label = 'Quick check'): Promise<void> {
+  await focusField(page, label);
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 60; i++) {
+    await page.keyboard.press('ArrowRight');
+    if ((await proxy(page).getAttribute('aria-valuetext'))?.includes('at the mark')) break;
+  }
+  await expect(proxy(page)).toHaveAttribute('aria-valuetext', /at the mark/);
+  await page.waitForTimeout(450);
+  await page.keyboard.press('Enter');
+  await expect(proxy(page)).toHaveAttribute('aria-valuetext', 'Verified');
+}

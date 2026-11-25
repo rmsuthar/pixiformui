@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { focusField } from './helpers';
+import { focusField, solveHumanCheck } from './helpers';
 
 test('registration submits encrypted passwords to the server (201)', async ({ page }) => {
   const id = Date.now().toString(36);
@@ -23,6 +23,7 @@ test('registration submits encrypted passwords to the server (201)', async ({ pa
   await page.keyboard.press('Enter');
   await focusField(page, 'I agree to the Terms of Service and Privacy Policy');
   await page.keyboard.press(' ');
+  await solveHumanCheck(page);
   await page.waitForTimeout(2600); // the bot guard requires a minimum fill time
 
   const [request, response] = await Promise.all([

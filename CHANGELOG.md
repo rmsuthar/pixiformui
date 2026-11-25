@@ -7,6 +7,16 @@
   The reference server replays the stored response for a repeated key (rejects reused keys with different data, 422,
   and concurrent duplicates, 409), so a retry after a lost response is processed once.
 - New form options `once` (lock after success; `form.unlock()`) and `cooldownMs` (blocked event, code `'cooldown'`).
+- **Bot protection:** an invisible proof-of-work "form proof" (`FormProof`, `X-Form-Proof` header) that the browser
+  solves while the person types and the server checks with one hash; the `action` option handles it automatically.
+  The reference server also refuses registrations sent too soon after the session starts (`MIN_FILL_MS`), and
+  supports Cloudflare Turnstile or hCaptcha (`TURNSTILE_SECRET` / `HCAPTCHA_SECRET`, `captcha` option,
+  `secureSubmit({ captchaToken })`).
+- **Human check slider:** new `humancheck` field (`HumanCheck`): drag the handle onto a randomly placed mark. It accepts
+  only trusted events and person-like drags, moves the mark after a miss, pauses after repeated misses, and works with
+  the keyboard and screen readers. It runs in the browser only and isn't sent with the form; see the guide's chapter
+  29 for what it can and can't stop.
+- `Control.submits`: UI-only fields can opt out of `form.values()` and `serialize()`.
 
 ## 0.1.5
 

@@ -10,6 +10,7 @@ export { Switch, type SwitchOptions } from './controls/Switch';
 export { RadioGroup, type RadioGroupOptions, type Choice } from './controls/RadioGroup';
 export { Select, type SelectOptions } from './controls/Select';
 export { Slider, type SliderOptions } from './controls/Slider';
+export { HumanCheck, type HumanCheckOptions, type HumanCheckFailure } from './controls/HumanCheck';
 export { Button, type ButtonOptions, type ButtonVariant } from './controls/Button';
 export { Form, type FormOptions, type FormValues, type SubmitResult, type SerializedValues, type SerializeOptions, type SetValuesResult } from './Form';
 export { rulesToJsonSchema, publicRules, type JsonSchema, type ToJsonSchemaOptions } from '../../shared/jsonSchema';
@@ -79,3 +80,4 @@ export {
   type PasskeyAuthenticationJSON,
 } from './security/passkeys';
 export type { AutocompleteToken } from './core/KeyboardProxy';
+export { FormProof, type PowChallenge } from './security/proof';

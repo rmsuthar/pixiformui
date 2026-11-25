@@ -24,6 +24,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OTP_LENGTH, otpRules, registrationRules, validatePartial, validatePayload, validateValue } from '../shared/rules.ts';
 import { b64u, verifyAuthentication, verifyRegistration, type StoredCredential } from './webauthn.ts';
+import { parsePowToken, type PowChallenge } from '../shared/pow.ts';
 import { REGISTRATION_DRAFT_RULES } from '../shared/agent.ts';
 import { loadKeyRing, openEnvelope } from './pfe.ts';
 
@@ -144,6 +145,60 @@ interface Session {
   passkey?: { challenge: string; type: 'register' | 'login'; username?: string; userId?: string; expires: number };
   /** Signed-in username (set by passkey sign-in or passkey registration). */
   user?: string;
+  /** When this session was first issued a form (server-side minimum fill time). */
+  issuedAt?: number;
+  /** Current proof-of-work challenge (rotated after each successful protected request). */
+  pow?: PowChallenge;
+}
+
+// ------------------------------------------------------------------ bot defence (server-enforced)
+/** Proof-of-work difficulty in leading zero bits (each +1 doubles the work). 0 disables. */
+const POW_DIFFICULTY = Math.max(0, Math.min(26, Number(process.env.POW_DIFFICULTY ?? 18) || 0));
+/** Submissions sooner than this after the session was issued are rejected. */
+const MIN_FILL_MS = Math.max(0, Number(process.env.MIN_FILL_MS ?? 2000) || 0);
+const newPow = (): PowChallenge => ({ challenge: randomBytes(18).toString('base64url'), difficulty: POW_DIFFICULTY });
+
+/** Checks the X-Form-Proof header against the session's challenge (one SHA-256). */
+function proofOk(req: IncomingMessage, session: Session): boolean {
+  if (POW_DIFFICULTY === 0) return true;
+  const t = parsePowToken(req.headers['x-form-proof']);
+  if (!t || !session.pow || t.challenge !== session.pow.challenge) return false;
+  const digest = createHash('sha256').update(`${t.challenge}:${t.nonce}`).digest();
+  let zeros = 0;
+  for (const byte of digest) {
+    if (byte === 0) {
+      zeros += 8;
+      continue;
+    }
+    zeros += Math.clz32(byte) - 24;
+    break;
+  }
+  return zeros >= session.pow.difficulty;
+}
+
+/**
+ * Optional CAPTCHA (Cloudflare Turnstile or hCaptcha): enforced when TURNSTILE_SECRET or
+ * HCAPTCHA_SECRET is set. The browser sends the widget's token as X-Captcha-Token.
+ */
+const CAPTCHA = process.env.TURNSTILE_SECRET
+  ? { url: 'https://challenges.cloudflare.com/turnstile/v0/siteverify', secret: process.env.TURNSTILE_SECRET }
+  : process.env.HCAPTCHA_SECRET
+    ? { url: 'https://api.hcaptcha.com/siteverify', secret: process.env.HCAPTCHA_SECRET }
+    : null;
+export async function verifyCaptcha(token: unknown, ip: string): Promise<boolean> {
+  if (!CAPTCHA) return true;
+  if (typeof token !== 'string' || !token || token.length > 4096) return false;
+  try {
+    const res = await fetch(CAPTCHA.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: CAPTCHA.secret, response: token, remoteip: ip }),
+      signal: AbortSignal.timeout(8000),
+    });
+    return res.ok && ((await res.json()) as { success?: boolean }).success === true;
+  } catch {
+    return false; // fail closed
+  }
 }
 
 // ------------------------------------------------------------------ passkeys (demo store)
@@ -450,9 +505,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
 
   if (path === '/api/session' && req.method === 'GET') {
     const { sid, session } = getSession(req) ?? createSession(res);
+    session.issuedAt ??= Date.now();
+    session.pow ??= newPow();
     return json(res, 200, {
       csrfToken: csrfFor(sid),
       encryption: { alg: 'PFE1', kid: pfe.current.kid, spki: pfe.current.spki, challenge: session.challenge },
+      ...(POW_DIFFICULTY ? { pow: session.pow } : {}),
+      captcha: !!CAPTCHA,
     });
   }
 
@@ -466,6 +525,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     if (path === '/api/otp/send') {
       const limit = rateLimit(`otp-send:${ip}`, 3, 60_000);
       if (!limit.ok) return json(res, 429, { ok: false, message: `Please wait ${limit.retryAfter}s before requesting another code.` }, { 'Retry-After': String(limit.retryAfter) });
+      // Sending SMS costs money: require the form proof (stops "SMS pumping" bots).
+      if (!proofOk(req, session)) return json(res, 400, { ok: false, message: 'Security check failed. Please try again.', pow: session.pow });
+      session.pow = newPow();
       const code = randomInt(0, 10 ** OTP_LENGTH).toString().padStart(OTP_LENGTH, '0'); // CSPRNG, uniform
       session.otp = { hash: otpHash(sid, code), expires: Date.now() + OTP_TTL, attempts: 0 };
       session.verified = false;
@@ -475,6 +537,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
         ok: true,
         message: OTP_DEV_LOG ? 'Code sent. In dev mode it is printed in the server console.' : 'Code sent.',
         expiresIn: OTP_TTL / 1000,
+        ...(POW_DIFFICULTY ? { pow: session.pow } : {}),
       });
     }
 
@@ -672,11 +735,23 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     // with every response, so a captured request can never be replayed.
     const challenge = current.session.challenge;
     current.session.challenge = newChallenge();
-    const reply = (status: number, body: Record<string, unknown>, extra?: Record<string, string>) =>
-      json(res, status, { ...body, challenge: current.session.challenge }, extra);
+    const reply = (status: number, body: Record<string, unknown>, extra?: Record<string, string>) => {
+      if (status < 300) current.session.pow = newPow(); // a proof is good for one successful submit
+      json(res, status, { ...body, challenge: current.session.challenge, ...(POW_DIFFICULTY ? { pow: current.session.pow } : {}) }, extra);
+    };
     const limit = rateLimit(`register:${ip}`, 5, 60_000);
     if (!limit.ok) {
       return reply(429, { ok: false, message: `Too many attempts. Try again in ${limit.retryAfter}s.` }, { 'Retry-After': String(limit.retryAfter) });
+    }
+    // Bot defence, enforced here (the browser-side bot guard can be skipped by calling the API directly).
+    if (Date.now() - (current.session.issuedAt ?? Date.now()) < MIN_FILL_MS) {
+      return reply(400, { ok: false, message: 'That was submitted too quickly. Please take a moment and try again.' });
+    }
+    if (!proofOk(req, current.session)) {
+      return reply(400, { ok: false, message: 'Security check failed. Please try again.' });
+    }
+    if (!(await verifyCaptcha(req.headers['x-captcha-token'], ip))) {
+      return reply(400, { ok: false, message: 'Please complete the human check and try again.' });
     }
 
     let payload: Record<string, unknown>;

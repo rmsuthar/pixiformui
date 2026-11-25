@@ -181,7 +181,7 @@ export class Form extends EventEmitter {
   values(): FormValues {
     const out: FormValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button') continue;
+      if (c.ariaRole() === 'button' || !c.submits) continue;
       out[name] = c.getValue();
     }
     return out;
@@ -197,7 +197,7 @@ export class Form extends EventEmitter {
   async serialize(opts: SerializeOptions = {}): Promise<SerializedValues> {
     const out: SerializedValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button') continue;
+      if (c.ariaRole() === 'button' || !c.submits) continue;
       if (opts.include && !opts.include.includes(name)) continue;
       if (opts.exclude?.includes(name)) continue;
       const v = c.getValue();
@@ -225,7 +225,7 @@ export class Form extends EventEmitter {
     for (const name of Object.keys(values)) {
       const c = this.controls.get(name);
       const v = values[name];
-      if (!c || c.ariaRole() === 'button') {
+      if (!c || c.ariaRole() === 'button' || !c.submits) {
         result.skipped[name] = 'unknown field';
         continue;
       }

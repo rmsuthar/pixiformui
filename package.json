@@ -19,7 +19,8 @@
     "indexnow": "node scripts/indexnow.mjs",
     "test:e2e": "playwright test",
     "stats": "node scripts/stats.mjs",
-    "size": "node scripts/size-check.mjs"
+    "size": "node scripts/size-check.mjs",
+    "docs:images": "node scripts/doc-images.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",

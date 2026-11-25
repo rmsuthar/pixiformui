@@ -326,6 +326,10 @@ The server side of `/api/login` is shown in [§14.4](#144-adding-an-endpoint-sig
 
 ## 5. Controls reference
 
+Every control has the same three parts, stacked: the label (with `*` when required and an optional ⓘ tooltip), the body, and a line for helper text that the error replaces.
+
+<img src="images/controls/anatomy.png" width="722" alt="Anatomy of a control: the label row with required star and info icon, the input body, and the helper text line">
+
 ### 5.1 Options shared by every control (`ControlOptions<V>`)
 
 | Option | Type | Default | Notes |
@@ -369,6 +373,10 @@ control.fieldName; control.touched; control.validateOn; control.wipe();
 
 ### 5.3 `TextInput` and `TextArea`
 
+<img src="images/controls/text-input.png" width="562" alt="Three text inputs: empty with a placeholder, filled with helper text, and an invalid email with its error">
+
+<img src="images/controls/textarea.png" width="562" alt="A text area with four rows of text and helper text">
+
 ```ts
 new TextInput(ui, { name: 'city', label: 'City', placeholder: 'Jaipur', maxLength: 60 });
 new TextArea(ui, { name: 'notes', label: 'Notes', rows: 5, showCounter: true, maxLength: 1000 });
@@ -411,6 +419,8 @@ Pointer: click to place the caret, drag to select (mouse/pen), double-click sele
 
 ### 5.4 `PasswordInput`
 
+<img src="images/controls/password.png" width="562" alt="A masked password with a strength meter reading Good, and a second password revealed with the eye button">
+
 ```ts
 const pw = new PasswordInput(ui, { name: 'password', label: 'Password', required: true });
 pw.on('change', (s: Secret) => meter.update(s));
@@ -434,6 +444,8 @@ Extra members: `isRevealed`, `setRevealed(bool)`.
 
 ### 5.5 `Checkbox`
 
+<img src="images/controls/choices.png" width="562" alt="Checkboxes, unchecked and checked, and switches, off and on">
+
 ```ts
 new Checkbox(ui, { name: 'terms', label: 'I accept the terms', required: true, requiredMessage: 'Please accept.' });
 ```
@@ -452,6 +464,8 @@ Members: `toggle()`. Keyboard: Space/Enter toggle, ← off, → on.
 
 ### 5.7 `RadioGroup<T>`
 
+<img src="images/controls/radio.png" width="562" alt="A vertical radio group for plans and a horizontal one for contact method">
+
 ```ts
 new RadioGroup(ui, {
   name: 'plan', label: 'Plan', direction: 'horizontal', value: 'free',
@@ -463,6 +477,8 @@ One Tab stop for the whole group. ↑ ↓ ← → move **and** select (skipping 
 Horizontal groups wrap to new rows when narrow. `setValue()` ignores values that aren't declared options.
 
 ### 5.8 `Select<T>`
+
+<img src="images/controls/select.png" width="744" alt="A closed select with a placeholder, and an open select listing team sizes with the current one highlighted">
 
 ```ts
 new Select(ui, { name: 'country', label: 'Country', placeholder: 'Choose…', options: [{ value: 'IN', label: 'India' }, ...] });
@@ -483,6 +499,8 @@ Members: `isOpen`, `setOpen(bool)`.
 
 ### 5.9 `Slider`
 
+<img src="images/controls/slider.png" width="562" alt="Two sliders: a formatted budget of $1,800 and years of experience at 6">
+
 ```ts
 new Slider(ui, { name: 'age', label: 'Age', min: 18, max: 99, step: 1, value: 30, format: (v) => `${v} yrs` });
 ```
@@ -492,6 +510,8 @@ Keyboard: arrows ±step, PageUp/PageDown ±10%, Home/End min/max. Dragging captu
 a scroll view won't pan while you drag the thumb.
 
 ### 5.10 `Button`
+
+<img src="images/controls/buttons.png" width="702" alt="Button variants primary, secondary, outline, ghost and danger, plus a loading and a disabled button">
 
 ```ts
 new Button(ui, { name: 'save', text: 'Save', variant: 'primary', onPress: async () => { await save(); } });
@@ -507,6 +527,8 @@ new Button(ui, { name: 'save', text: 'Save', variant: 'primary', onPress: async 
 Members: `text`, `variant`, `loading`, `press()`. Keyboard: Enter/Space (key repeat ignored).
 
 ### 5.11 `OtpInput`
+
+<img src="images/controls/otp.png" width="562" alt="A six-digit code input in two groups of three, with three digits entered">
 
 ```ts
 const otp = new OtpInput(ui, {
@@ -543,6 +565,8 @@ Behaviour:
 Members: `length`, `isComplete`, `clear()`, `obscure`, `autoSubmit`.
 
 ### 5.12 `DatePicker` (calendar with optional time)
+
+<img src="images/controls/date.png" width="784" alt="A closed date and time picker showing Fri, Dec 4, 2026 at 10:30 AM, and an open calendar for December 2026">
 
 ```ts
 const dob = new DatePicker(ui, {
@@ -592,6 +616,8 @@ Values are plain local strings with no timezone, so the browser and the server a
 an instant in time, combine the value with the user's timezone on the server.
 
 ### 5.13 `PhoneInput` (number with country code)
+
+<img src="images/controls/phone.png" width="562" alt="A phone input with the India +91 country code and a formatted number">
 
 ```ts
 const phone = new PhoneInput(ui, {
@@ -991,10 +1017,14 @@ take part (`Layoutable`).
 
 ### `Column(items, gap = 16, padding = insets(0))`
 
+<img src="images/layout/column.png" width="502" alt="A column of three full-width fields with the gaps between them highlighted">
+
 Vertical stack. Re-lays out automatically when a child emits `resize` (e.g. an error message appears).
 `column.add(...items)`, `Column.spacer(height)`. Hidden children (`visible = false`) are skipped.
 
 ### `Row(items, gap = 16, breakpoint = 480)`
+
+<img src="images/layout/row.png" width="964" alt="The same row at 560 pixels, side by side, and at 340 pixels, stacked below the breakpoint">
 
 Equal-width children side by side; **stacks vertically below `breakpoint`** px. Use `breakpoint = 0` to never stack.
 
@@ -1013,6 +1043,10 @@ in view and re-reveals the focused field when the viewport shrinks (mobile keybo
 Methods: `setViewport(w, h)`, `scrollTo(y)`, `reveal(container)`.
 
 ### `FieldGroup(ui, options)`: titled, optionally collapsible sections
+
+<img src="images/layout/groups.png" width="582" alt="Field group variants outline, card and plain, each with city and postcode fields">
+
+<img src="images/layout/group-states.png" width="784" alt="A folded collapsible group, and a group with a required field error showing a 1 to fix badge and a red border">
 
 The canvas equivalent of `<fieldset>` + `<legend>`. Create it, `add()` fields (or rows, labels, nested groups),
 and put the group in your layout. Grouping is visual and for accessibility only: register the fields with the
@@ -1080,6 +1114,22 @@ class Card extends Container {
 | `StrengthMeter(ui)` | `meter.update(secret)` after each password change. Four animated segments plus a caption. Uses `estimateStrength()`, which reads character classes without creating strings. |
 | `Toast(ui)` | `toast.show(message, 'info' \| 'success' \| 'error', ms = 4000)`. Bottom-centre, also announced to screen readers. |
 | `PrivacyScreen(ui, message?)` | Covers the app when the window loses focus or the tab is hidden; renders synchronously so OS app switchers capture the cover. `privacy.enabled = false` to pause. |
+
+**Label variants**
+
+<img src="images/widgets/labels.png" width="562" alt="The four Label variants: title, subtitle, body and caption">
+
+**StrengthMeter**, from too weak to strong
+
+<img src="images/widgets/strength.png" width="562" alt="Four passwords with strength meters reading Too weak, Weak, Good and Strong">
+
+**Toast** kinds: info, success and error
+
+<img src="images/widgets/toast.png" width="986" alt="Three toasts: Draft saved, Account created, and Could not send. Try again.">
+
+**PrivacyScreen**
+
+<img src="images/widgets/privacy.png" width="744" alt="A card payment form, and the same form covered by the privacy screen with a lock icon">
 
 ---
 
@@ -2405,6 +2455,8 @@ The widget loads the provider's script and iframe, so add its origin to your CSP
 
 ### 29.3 Human check slider
 
+<img src="images/controls/humancheck.png" width="562" alt="The slide-to-the-mark human check: a handle on the left and a dashed mark on the track">
+
 A "slide to the mark" control: a mark sits at a random spot on the track and the person drags the handle onto it.
 
 ```ts
@@ -2439,6 +2491,8 @@ the form proof and timing check, and add Turnstile or hCaptcha where abuse is co
 ## 30. Conditional and hidden fields
 
 ### 30.1 Showing fields only when they apply
+
+<img src="images/conditional/before-after.png" width="824" alt="The same form twice: with Email chosen it shows an email field; with Phone and business chosen it shows a mobile field and a Company group">
 
 Give any field, group, heading or paragraph a `showIf` rule. It's re-checked after every change.
 

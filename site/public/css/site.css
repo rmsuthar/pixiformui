@@ -723,6 +723,12 @@ h1 {
 }
 .prose img {
   max-width: 100%;
+  height: auto;
+}
+.prose img[src^='/docs/images/'] {
+  display: block;
+  margin: 18px 0 22px;
+  border-radius: 10px;
 }
 .notfound {
   text-align: center;

@@ -57,6 +57,8 @@ After publishing, jsDelivr and unpkg serve the package automatically:
 - Old versions stay downloadable from the website only if you keep their files: copy `dist-site/v/<old>/` forward
   or keep them in `site/public/v/<old>/` before building a new version.
 - Never unpublish a version people depend on; publish a fixed patch release instead.
+- If a release changes how controls look, regenerate the guide's pictures before deploying the site:
+  `npm run build:lib && npm run docs:images` (scenes are in `scripts/doc-images/harness.js`).
 
 ## Usage stats
 

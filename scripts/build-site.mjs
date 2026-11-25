@@ -4,7 +4,7 @@
 //      page per chapter (better titles, descriptions and URLs for search engines).
 //   3. sitemap.xml and robots.txt are generated.
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
@@ -533,10 +533,29 @@ ${p.html}
 `;
 }
 
+// Guide pictures (docs/images, made by `npm run docs:images`): served from /docs/images/. The Markdown uses
+// <img src="images/…" width="…"> so GitHub shows them too; here they get an absolute path, a height (from the PNG,
+// so the page doesn't shift while they load) and lazy loading.
+const imagesDir = join(root, 'docs', 'images');
+if (existsSync(imagesDir)) cpSync(imagesDir, join(out, 'docs', 'images'), { recursive: true });
+const pngSize = (file) => {
+  const b = readFileSync(file);
+  return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+};
+const docImages = (html) =>
+  html.replace(/<img src="images\/([^"]+)"([^>]*)>/g, (m, path, rest) => {
+    const file = join(imagesDir, path);
+    if (!existsSync(file)) throw new Error(`Missing guide image docs/images/${path}`);
+    const { w, h } = pngSize(file);
+    const width = Number(/width="(\d+)"/.exec(rest)?.[1] ?? Math.round(w / 2));
+    const attrs = rest.replace(/\s*width="\d+"/, '');
+    return `<img src="/docs/images/${path}" width="${width}" height="${Math.round((width * h) / w)}" loading="lazy" decoding="async"${attrs}>`;
+  });
+
 for (const p of pages) {
   const dir = join(out, p.url);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'index.html'), layout(p));
+  writeFileSync(join(dir, 'index.html'), docImages(layout(p)));
 }
 console.log(`docs: ${pages.length} pages (${chapters.length} guide chapters)`);
 

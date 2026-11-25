@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Docs:** the guide now shows every control, layout and widget as rendered by the library: control anatomy,
+  each control in its typical states (open select and calendar, errors, password strength…), `Column` gaps, `Row`
+  side by side and stacked, `FieldGroup` variants and states, toasts, the privacy screen, and conditional fields
+  before and after. `npm run docs:images` regenerates them from the current build.
+
 ## 0.1.7
 
 - **Conditional fields:** `showIf` on any field, group, heading or paragraph (`{ field, equals | notEquals | in |

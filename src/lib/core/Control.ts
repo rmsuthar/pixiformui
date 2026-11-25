@@ -65,6 +65,11 @@ export abstract class Control<V> extends Container implements Focusable {
   readonly sensitive: boolean = false;
   /** False for UI-only fields (e.g. the human check) that Form leaves out of values() and serialize(). */
   readonly submits: boolean = true;
+  /**
+   * Hidden by a condition (showIf / setVisible): Form skips it when validating and leaves it out
+   * of values() and serialize(). Its value is kept, so it comes back if the field is shown again.
+   */
+  excluded = false;
   readonly inputMode: KeyboardTarget['inputMode'] = 'none';
   /** Autofill / password-manager token (opt-in per field; 'off' keeps them away). */
   readonly autocomplete: AutocompleteToken = 'off';

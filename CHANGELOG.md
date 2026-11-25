@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Conditional fields:** `showIf` on any field, group, heading or paragraph (`{ field, equals | notEquals | in |
+  notIn | gt | gte | lt | lte | empty | filled }`, `all` / `any` / `not`, or a function). Hidden fields aren't
+  validated or submitted, leave the screen-reader outline and Tab order, give their space to neighbours (including in
+  rows), and keep their value. `handle.setVisible(name, true | false | null)`, `handle.isVisible(name)` (also on
+  `<pixi-form>`), and a `fieldvisibility` event. `evaluateCondition()` is exported for servers.
+- **Hidden fields:** `{ type: 'hidden', name, value }` (`HiddenField`) submits a value that is never drawn and isn't
+  in the page's markup.
+- The human-check slider keeps its prompt text clear of the mark.
+
 ## 0.1.6
 
 - **Duplicate submissions:** `form.idempotencyKey` (stable across retries of the same values, including re-typed

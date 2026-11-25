@@ -42,6 +42,8 @@ export interface PixiFormEventMap {
   validate: { name: string; error: string | null; code: string | null };
   /** A FieldGroup was opened or folded. */
   grouptoggle: { group: string; expanded: boolean };
+  /** A field or group was shown or hidden by its showIf rule or handle.setVisible(). */
+  fieldvisibility: { name: string; visible: boolean };
   /**
    * Validation passed and the form is about to submit. Call `preventDefault()` to stop
    * (e.g. to show your own confirmation first, then call `handle.submit()` again).
@@ -67,7 +69,7 @@ export type PixiFormListeners = { [K in PixiFormEventType]?: PixiFormListener<K>
 /** All event names (handy for forwarding them, e.g. as DOM events). */
 export const PIXIFORM_EVENTS: readonly PixiFormEventType[] = [
   'loadstart', 'load', 'resize', 'themechange', 'a11ychange', 'error', 'destroy',
-  'change', 'dirty', 'focus', 'blur', 'validate', 'grouptoggle',
+  'change', 'dirty', 'focus', 'blur', 'validate', 'grouptoggle', 'fieldvisibility',
   'beforesubmit', 'submitting', 'success', 'failure', 'invalid', 'blocked', 'reset', 'idle',
 ];
 

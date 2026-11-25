@@ -24,6 +24,7 @@ Docs, live demo and downloads: **https://pixiformui.lets.gen.in** · Source: **h
 - MCP: `npm run mcp` starts an MCP server whose tools let an AI assistant validate and prefill a registration; the person finishes it (password, terms) in the secure form via a single-use link
 - Events: typed lifecycle and form events (`load`, `change`, `dirty`, `beforesubmit` (cancelable), `success`…) via `config.on`, `handle.on()` or `pixiform-*` DOM events; `load: 'visible' | 'idle'` lazy mounting with a `data-pixiform-state` attribute for placeholders
 - Autofill and passkeys: opt-in `autocomplete` per field for browser autofill and password managers; `createPasskey()` / `getPasskey()` helpers (with passkey suggestions) and a server-side WebAuthn verifier
+- Conditional fields (`showIf` on fields and groups; hidden ones aren't validated or sent), `handle.setVisible()`, and `hidden` fields
 - Bot and duplicate protection: invisible proof-of-work checked by the server, a timing check, optional Turnstile/hCaptcha, a slide-to-the-mark human check, idempotency keys, `once` and `cooldownMs`
 - Shared rules (`shared/rules.ts`) used by **both** the browser and the bundled Node server
 

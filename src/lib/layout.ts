@@ -108,10 +108,13 @@ export class Row extends Container implements Layoutable {
   layout(width: number): void {
     this.width_ = width;
     this.laying = true;
+    // Hidden items (showIf) give their space to the others; a row with none left hides itself.
+    const shown = this.items.filter((it) => it.visible);
+    this.visible = shown.length > 0;
     const stacked = width < this.breakpoint;
     if (stacked) {
       let y = 0;
-      this.items.forEach((it, i) => {
+      shown.forEach((it, i) => {
         if (i) y += this.gap;
         it.layout?.(width);
         it.position.set(0, y);
@@ -119,10 +122,10 @@ export class Row extends Container implements Layoutable {
       });
       this.height_ = y;
     } else {
-      const n = this.items.length;
+      const n = Math.max(1, shown.length);
       const w = (width - this.gap * (n - 1)) / n;
       let h = 0;
-      this.items.forEach((it, i) => {
+      shown.forEach((it, i) => {
         it.layout?.(w);
         it.position.set(i * (w + this.gap), 0);
         h = Math.max(h, heightOf(it));

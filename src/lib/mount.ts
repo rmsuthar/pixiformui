@@ -28,6 +28,8 @@ import { RadioGroup, type RadioGroupOptions } from './controls/RadioGroup';
 import { Select, type SelectOptions } from './controls/Select';
 import { Slider, type SliderOptions } from './controls/Slider';
 import { HumanCheck, type HumanCheckOptions } from './controls/HumanCheck';
+import { HiddenField, type HiddenFieldOptions } from './controls/HiddenField';
+import { conditionFields, evaluateCondition, type ShowIf } from './conditions';
 import { Switch, type SwitchOptions } from './controls/Switch';
 import { TextArea, TextInput, type TextAreaOptions, type TextInputOptions } from './controls/TextInput';
 import type { Control } from './core/Control';
@@ -67,6 +69,11 @@ import { Label, PrivacyScreen, StrengthMeter, Toast } from './widgets';
 type WithRow<T> = T & {
   /** Fields sharing the same `row` key are placed side by side (stacked on narrow screens). */
   row?: string;
+  /**
+   * Show this field (or group, heading, paragraph) only when the condition holds, e.g.
+   * `{ field: 'contact', equals: 'phone' }`. While hidden it isn't validated or submitted.
+   */
+  showIf?: ShowIf;
 };
 
 export type FieldConfig =
@@ -80,6 +87,7 @@ export type FieldConfig =
   | WithRow<{ type: 'select' } & SelectOptions<string>>
   | WithRow<{ type: 'slider' } & SliderOptions>
   | WithRow<{ type: 'humancheck' } & HumanCheckOptions>
+  | WithRow<{ type: 'hidden' } & HiddenFieldOptions>
   | WithRow<{ type: 'date' } & DatePickerOptions>
   | WithRow<{ type: 'phone' } & PhoneInputOptions>
   | WithRow<{ type: 'heading' | 'paragraph'; text: string }>
@@ -192,6 +200,13 @@ export interface PixiFormHandle {
   readonly loaded: Promise<PixiFormEventMap['load']>;
   /** True after the first user edit since load or the last reset. */
   isDirty(): boolean;
+  /**
+   * Shows or hides a field or group from code, overriding its showIf rule; `null` hands control
+   * back to the rule. Hidden fields aren't validated or submitted, and keep their value.
+   */
+  setVisible(name: string, visible: boolean | null): void;
+  /** True if the field or group is currently shown (false inside a hidden group). */
+  isVisible(name: string): boolean;
   destroy(): void;
 }
 
@@ -315,8 +330,27 @@ async function mountInner(
   const groups: Record<string, FieldGroup> = {};
   let groupSeq = 0;
 
+  // ---- conditional visibility: one toggle per field, group and conditional heading, in config order
+  interface Toggle {
+    name: string;
+    views: Container[];
+    showIf?: ShowIf;
+    parent: Toggle | null;
+    control?: Control<any>;
+    shown: boolean;
+  }
+  const toggles: Toggle[] = [];
+  const toggleByName = new Map<string, Toggle>();
+  const addToggle = (name: string, views: Container[], showIf: ShowIf | undefined, parent: Toggle | null, control?: Control<any>): Toggle => {
+    if (showIf !== undefined && typeof showIf !== 'function') conditionFields(showIf); // validates the shape
+    const t: Toggle = { name, views, showIf, parent, control, shown: true };
+    toggles.push(t);
+    if (name) toggleByName.set(name, t);
+    return t;
+  };
+
   /** Builds a list of field configs into layout items (rows are built after their fields exist). */
-  const build = (fields: FieldConfig[], depth: number): Layoutable[] => {
+  const build = (fields: FieldConfig[], depth: number, parent: Toggle | null = null): Layoutable[] => {
     if (depth > 4) throw new Error('mountPixiForm: groups can be nested at most 4 levels deep');
     const entries: (Layoutable | { row: string })[] = [];
     const rows = new Map<string, Layoutable[]>();
@@ -332,7 +366,7 @@ async function mountInner(
     };
 
     for (const f of fields) {
-      const { type, row, ...opts } = f as FieldConfig & Record<string, unknown>;
+      const { type, row, showIf, ...opts } = f as FieldConfig & Record<string, unknown> & { showIf?: ShowIf };
       let c: Control<any> | null = null;
       switch (type) {
         case 'group': {
@@ -341,14 +375,18 @@ async function mountInner(
           const g = new FieldGroup(ui, { ...gopts, name: gopts.name ?? `group${++groupSeq}` });
           if (groups[g.fieldName] || controls[g.fieldName]) throw new Error(`mountPixiForm: duplicate name "${g.fieldName}"`);
           groups[g.fieldName] = g;
-          g.add(...build(inner, depth + 1));
+          const gt = addToggle(g.fieldName, [g], showIf, parent);
+          g.add(...build(inner, depth + 1, gt));
           place(row, g);
           continue;
         }
         case 'heading':
-        case 'paragraph':
-          place(row, new Label(ui, String((f as { text: string }).text), type === 'heading' ? 'title' : 'body'));
+        case 'paragraph': {
+          const label = new Label(ui, String((f as { text: string }).text), type === 'heading' ? 'title' : 'body');
+          if (showIf !== undefined) addToggle('', [label], showIf, parent);
+          place(row, label);
           continue;
+        }
         case 'text':
           c = new TextInput(ui, opts as unknown as TextInputOptions);
           break;
@@ -378,6 +416,7 @@ async function mountInner(
             place(row, pw);
             place(undefined, meter);
             controls[pw.fieldName] = pw;
+            addToggle(pw.fieldName, [pw, meter], showIf, parent, pw);
             continue;
           }
           break;
@@ -403,6 +442,9 @@ async function mountInner(
         case 'humancheck':
           c = new HumanCheck(ui, opts as unknown as HumanCheckOptions);
           break;
+        case 'hidden':
+          c = new HiddenField(ui, opts as unknown as HiddenFieldOptions);
+          break;
         case 'date':
           c = new DatePicker(ui, opts as unknown as DatePickerOptions);
           break;
@@ -414,6 +456,7 @@ async function mountInner(
       }
       if (controls[c.fieldName] || groups[c.fieldName]) throw new Error(`mountPixiForm: duplicate field name "${c.fieldName}"`);
       controls[c.fieldName] = c;
+      addToggle(c.fieldName, [c], showIf, parent, c);
       place(row, c);
     }
     return entries.map((e) => ('row' in e && !(e instanceof Container) ? new Row(rows.get(e.row)!, 16, 520) : (e as Layoutable)));
@@ -433,6 +476,66 @@ async function mountInner(
   const form = new Form(ui, { ...(config.form ?? {}), onSubmit: config.onSubmit ?? submitter! });
   submitter?.prefetch();
   form.add(...Object.values(controls)).bindSubmit(submitBtn);
+
+  // ---- showIf: re-evaluated after every change; hidden fields count as empty, so rules chain.
+  for (const t of toggles) {
+    if (t.showIf === undefined || typeof t.showIf === 'function') continue;
+    for (const name of conditionFields(t.showIf) ?? []) {
+      if (!controls[name]) throw new Error(`mountPixiForm: showIf of "${t.name || 'a heading'}" refers to unknown field "${name}"`);
+    }
+  }
+  const overrides = new Map<string, boolean>();
+  let visibilityReady = false;
+  const applyToggle = (t: Toggle) => {
+    const c = t.control;
+    if (c) {
+      c.excluded = !t.shown;
+      if (!t.shown) {
+        if (c.focused) c.blur();
+        c.touched = false;
+        c.setError(null);
+      }
+    }
+    for (const v of t.views) {
+      v.visible = t.shown;
+      v.emit('resize', v); // the parent column/row/group closes or opens the gap
+    }
+    if (visibilityReady && t.name) events.emit('fieldvisibility', { name: t.name, visible: t.shown });
+  };
+  const resolveVisibility = () => {
+    for (let pass = 0; pass <= toggles.length; pass++) {
+      const shownValues: Record<string, unknown> = Object.create(null);
+      for (const t of toggles) if (t.control && t.shown) shownValues[t.name] = t.control.getValue();
+      const get = (name: string) => {
+        const t = toggleByName.get(name);
+        return t?.control && t.shown ? { value: t.control.getValue(), empty: t.control.isEmpty() } : undefined;
+      };
+      let changed = false;
+      for (const t of toggles) {
+        let own = true;
+        if (overrides.has(t.name)) own = overrides.get(t.name)!;
+        else if (typeof t.showIf === 'function') {
+          try {
+            own = !!t.showIf({ ...shownValues });
+          } catch (err) {
+            own = false;
+            events.emit('error', { error: err instanceof Error ? err : new Error(String(err)), phase: 'listener' });
+          }
+        } else if (t.showIf !== undefined) own = evaluateCondition(t.showIf, get);
+        const shown = own && (t.parent ? t.parent.shown : true);
+        if (shown !== t.shown) {
+          t.shown = shown;
+          changed = true;
+          applyToggle(t);
+        }
+      }
+      if (!changed) break;
+    }
+  };
+  resolveVisibility();
+  visibilityReady = true;
+  for (const c of Object.values(controls)) c.on('change', resolveVisibility);
+  form.on('reset', resolveVisibility);
   const toast = new Toast(ui);
   const showToasts = config.toasts ?? true;
   if (showToasts) {
@@ -642,6 +745,13 @@ async function mountInner(
     },
     loaded,
     isDirty: () => dirty,
+    setVisible(name, visible) {
+      if (!toggleByName.has(name)) throw new Error(`setVisible: unknown field or group "${name}"`);
+      if (visible === null) overrides.delete(name);
+      else overrides.set(name, !!visible);
+      resolveVisibility();
+    },
+    isVisible: (name) => toggleByName.get(name)?.shown ?? false,
     destroy() {
       if (destroyed) return;
       destroyed = true;

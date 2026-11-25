@@ -102,6 +102,33 @@ const PRESETS: Record<string, { label: string; config: Record<string, unknown> }
       ],
     },
   },
+  conditional: {
+    label: 'Conditional fields',
+    config: {
+      title: 'Request a quote',
+      subtitle: 'Fields appear when they apply. Hidden ones aren’t validated or sent.',
+      theme: 'violet',
+      submitText: 'Send request',
+      fields: [
+        { type: 'hidden', name: 'source', value: 'playground' },
+        { type: 'radio', name: 'contact', label: 'Contact me by', value: 'email', direction: 'horizontal', options: [{ value: 'email', label: 'Email' }, { value: 'phone', label: 'Phone' }] },
+        { type: 'email', name: 'email', label: 'Email', required: true, showIf: { field: 'contact', equals: 'email' } },
+        { type: 'phone', name: 'phone', label: 'Mobile', required: true, defaultCountry: 'IN', showIf: { field: 'contact', equals: 'phone' } },
+        { type: 'switch', name: 'business', label: 'Buying for a business' },
+        {
+          type: 'group',
+          title: 'Company',
+          showIf: { field: 'business', equals: true },
+          fields: [
+            { type: 'text', name: 'company', label: 'Company name', required: true, row: 'c' },
+            { type: 'select', name: 'size', label: 'Team size', placeholder: 'Choose', row: 'c', options: [{ value: '1-10', label: '1–10' }, { value: '11-50', label: '11–50' }, { value: '51+', label: '51+' }] },
+            { type: 'text', name: 'vat', label: 'VAT number', showIf: { field: 'company', filled: true } },
+          ],
+        },
+        { type: 'textarea', name: 'notes', label: 'Anything else?', rows: 3 },
+      ],
+    },
+  },
   humancheck: {
     label: 'Human check (bot protection)',
     config: {

@@ -40,6 +40,7 @@ reference server. This guide covers everything you need to build, style, extend,
 27. [Autofill and passkeys](#27-autofill-and-passkeys)
 28. [Preventing duplicate submissions](#28-preventing-duplicate-submissions)
 29. [Protecting forms from bots](#29-protecting-forms-from-bots)
+30. [Conditional and hidden fields](#30-conditional-and-hidden-fields)
 
 ---
 
@@ -2431,3 +2432,84 @@ is `false`), because a client-side result proves nothing to a server. It raises 
 scripts that fill forms through the page. It won't stop a bot that drives a real browser with realistic mouse
 movement, reads the mark from the canvas pixels, or skips the page and posts to your API directly. Use it alongside
 the form proof and timing check, and add Turnstile or hCaptcha where abuse is costly.
+
+---
+
+## 30. Conditional and hidden fields
+
+### 30.1 Showing fields only when they apply
+
+Give any field, group, heading or paragraph a `showIf` rule. It's re-checked after every change.
+
+```ts
+fields: [
+  { type: 'radio', name: 'contact', label: 'Contact me by', value: 'email',
+    options: [{ value: 'email', label: 'Email' }, { value: 'phone', label: 'Phone' }] },
+  { type: 'email', name: 'email', label: 'Email', required: true, showIf: { field: 'contact', equals: 'email' } },
+  { type: 'phone', name: 'phone', label: 'Mobile', required: true, showIf: { field: 'contact', equals: 'phone' } },
+
+  { type: 'switch', name: 'business', label: 'Buying for a business' },
+  { type: 'group', title: 'Company', showIf: { field: 'business', equals: true }, fields: [
+    { type: 'text', name: 'companyName', label: 'Company name', required: true },
+    { type: 'text', name: 'vat', label: 'VAT number', showIf: { field: 'companyName', filled: true } },
+  ] },
+]
+```
+
+| Condition | Shows when |
+| --- | --- |
+| `{ field: 'x', equals: v }` / `notEquals: v` | the value is (not) `v` |
+| `{ field: 'x', in: [a, b] }` / `notIn: [...]` | the value is (not) one of the list |
+| `{ field: 'x', gt: n }`, `gte`, `lt`, `lte` | the value is a number (or numeric text) in range |
+| `{ field: 'x', filled: true }` / `empty: true` | the field has (no) value |
+| `{ field: 'x' }` | the field has a value |
+| `{ all: [...] }`, `{ any: [...] }`, `{ not: c }` | combinations |
+| `(values) => boolean` | anything else (not in JSON configs) |
+
+A condition with several operators needs all of them to hold. Dates compare as ISO strings.
+
+While a field is hidden:
+
+- it isn't validated, so a hidden `required` field never blocks submit;
+- it's left out of `values()`, `serialize()` and the submitted data;
+- it's removed from the screen-reader outline and the Tab order, and its space is given to the fields around it
+  (including the other fields in a `row`);
+- it keeps its value, which comes back if the field is shown again;
+- conditions that depend on it see it as empty, so rules chain naturally.
+
+From code:
+
+```ts
+handle.setVisible('phone', false); // hide, whatever its rule says
+handle.setVisible('phone', true);  // show, whatever its rule says
+handle.setVisible('phone', null);  // back to the rule
+handle.isVisible('company');       // false inside a hidden group too
+handle.on('fieldvisibility', (e) => console.log(e.name, e.visible));
+```
+
+`<pixi-form>` has the same `setVisible()` and `isVisible()` methods, and fires `pixiform-fieldvisibility`.
+
+A `showIf` that names a field that doesn't exist fails when the form mounts, with a clear error.
+
+**On the server:** apply the same rule before validating. For example, require `phone` only when
+`contact === 'phone'`, and ignore fields the rule says were hidden. `evaluateCondition()` is exported so a Node server
+can reuse the same condition objects.
+
+### 30.2 Hidden fields
+
+A value that is submitted with the form but never shown, like `<input type="hidden">`: a campaign or referral code, a
+record id, a plan picked on the previous page.
+
+```ts
+{ type: 'hidden', name: 'campaign', value: 'spring-sale' }
+
+// set it from code, e.g. from the URL
+handle.get('campaign')!.setValue(new URLSearchParams(location.search).get('utm_campaign'));
+```
+
+It accepts a string, number, boolean or `null`. Nothing about it is drawn, focusable or in the accessibility outline,
+and unlike an HTML hidden input its value isn't in the page's markup either. `reset()` restores the configured value,
+and a `showIf` on a hidden field decides whether it's sent.
+
+Anyone can still change what their browser sends, so treat hidden values as untrusted input on the server. Never use
+one for prices, permissions or secrets; look those up on the server from the id instead.

@@ -83,6 +83,7 @@ const CHAPTER_DESCRIPTIONS = {
   "serialization-ajax-and-mcp": "Serialize PixiFormUI forms to JSON with encrypted passwords, submit with AJAX without code, generate JSON Schema, and use MCP.",
   "preventing-duplicate-submissions": "Stop double submits in PixiFormUI: busy state, idempotency keys for retries after lost responses, once and cooldown options, and server-side uniqueness.",
   "protecting-forms-from-bots": "Protect PixiFormUI forms from bots: invisible proof-of-work, a server-side timing check, Turnstile or hCaptcha, and a slide-to-the-mark human check.",
+  "conditional-and-hidden-fields": "Show and hide PixiFormUI fields and groups with showIf rules (skipped by validation and submission while hidden), setVisible(), and hidden fields that submit a value without showing it.",
   "autofill-and-passkeys": "Opt-in browser autofill and password managers for PixiFormUI fields, plus passkey (WebAuthn) sign-up and sign-in with server verification.",
   "events-and-loading": "PixiFormUI events: load lifecycle, change, dirty, validate and cancelable beforesubmit, plus lazy loading with a placeholder state."
 };

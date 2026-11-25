@@ -83,6 +83,16 @@ export class PixiFormElement extends HTMLElement {
     this.#handle?.reset();
   }
 
+  /** Shows or hides a field or group, overriding its showIf rule (`null` restores the rule). */
+  setVisible(name: string, visible: boolean | null): void {
+    this.#handle?.setVisible(name, visible);
+  }
+
+  /** True if the field or group is currently shown. */
+  isVisible(name: string): boolean {
+    return this.#handle?.isVisible(name) ?? false;
+  }
+
   connectedCallback(): void {
     if (!this.style.display) this.style.display = 'block';
     if (this.#config && !this.#handle) void this.#mount();

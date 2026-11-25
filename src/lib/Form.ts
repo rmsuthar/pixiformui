@@ -181,7 +181,7 @@ export class Form extends EventEmitter {
   values(): FormValues {
     const out: FormValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button' || !c.submits) continue;
+      if (c.ariaRole() === 'button' || !c.submits || c.excluded) continue;
       out[name] = c.getValue();
     }
     return out;
@@ -197,7 +197,7 @@ export class Form extends EventEmitter {
   async serialize(opts: SerializeOptions = {}): Promise<SerializedValues> {
     const out: SerializedValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button' || !c.submits) continue;
+      if (c.ariaRole() === 'button' || !c.submits || c.excluded) continue;
       if (opts.include && !opts.include.includes(name)) continue;
       if (opts.exclude?.includes(name)) continue;
       const v = c.getValue();
@@ -257,7 +257,7 @@ export class Form extends EventEmitter {
 
   async validate(): Promise<Record<string, string>> {
     const errors: Record<string, string> = {};
-    const list = [...this.controls.values()].filter((c) => c.ariaRole() !== 'button');
+    const list = [...this.controls.values()].filter((c) => c.ariaRole() !== 'button' && !c.excluded);
     const results = await Promise.all(list.map((c) => ((c.touched = true), c.validate())));
     results.forEach((r, i) => {
       if (r) errors[list[i].fieldName] = r;

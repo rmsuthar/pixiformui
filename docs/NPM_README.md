@@ -15,6 +15,11 @@ wipeable memory, not in the page DOM. Browser extensions, session-replay scripts
 
 **Docs and live demo:** https://pixiformui.lets.gen.in · **Source:** https://github.com/rmsuthar/pixiformui
 
+> **☁️ No server? Use [PixiForm Cloud](https://cloud.pixiformui.lets.gen.in/).** Point a form at your Cloud endpoint and
+> skip the backend: submissions are end-to-end encrypted to a key only you hold, with bot protection, webhooks and
+> email alerts built in. **Free plan: 100 submissions a month, no card needed.**
+> [Start free](https://cloud.pixiformui.lets.gen.in/) · [Pro & Enterprise](https://pixiformui.lets.gen.in/pro/)
+
 ## Install
 
 ```bash
@@ -64,9 +69,20 @@ For production, download the bundle and serve it from your own origin (see the
 - [Encryption spec (PFE1)](https://pixiformui.lets.gen.in/docs/encryption/)
 - [Using it in React, Angular and HTML](https://pixiformui.lets.gen.in/docs/guide/using-pixiform-in-existing-apps-html-react-angular/)
 
-## Contact
+## PixiForm Cloud
 
-ravindra.suthar@me.com · [LinkedIn](https://www.linkedin.com/in/ravindrasuthar/)
+The hosted backend for PixiFormUI forms: no server to run, end-to-end encrypted submissions you decrypt in your
+browser, signed webhooks, email alerts, CSV export and an embed snippet for any site, WordPress or React/Next.js.
+
+- **Start free:** https://cloud.pixiformui.lets.gen.in (100 submissions a month, no card)
+- **Paid plans, secure card field, Pro controls, Enterprise:** https://pixiformui.lets.gen.in/pro/
+
+## Support and contact
+
+- **Questions, integration help, enterprise and compliance:** ravindra.suthar@me.com
+- **LinkedIn:** https://www.linkedin.com/in/ravindrasuthar/
+- **Bugs and feature requests:** https://github.com/rmsuthar/pixiformui/issues
+- **Privacy policy:** https://pixiformui.lets.gen.in/privacy/ · **Terms:** https://pixiformui.lets.gen.in/terms/
 
 ## License
 

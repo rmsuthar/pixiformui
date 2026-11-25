@@ -1,17 +1,19 @@
 {
   "name": "create-pixiformui",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Start a PixiFormUI app: a demo form and a secure Node server (CSRF, encrypted passwords, proof-of-work, idempotency, shared validation)",
   "keywords": [
-    "pixiformui",
     "create",
+    "form",
+    "nextjs",
+    "pixiform-cloud",
+    "pixiformui",
+    "react",
     "scaffold",
+    "secure",
     "starter",
     "template",
-    "form",
-    "secure",
-    "vite",
-    "react"
+    "vite"
   ],
   "type": "module",
   "bin": {
@@ -39,5 +41,9 @@
   "author": "Ravindrakumar Suthar <ravindra.suthar@me.com> (https://www.linkedin.com/in/ravindrasuthar/)",
   "publishConfig": {
     "access": "public"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://pixiformui.lets.gen.in/pro/"
   }
 }

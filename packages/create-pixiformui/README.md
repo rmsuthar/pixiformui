@@ -14,3 +14,6 @@ server-side rendering: the page and a placeholder for the form render on the ser
 You get a working form with conditional fields, a hidden field, encrypted passwords, an invisible proof-of-work,
 a human check and duplicate-submission protection, plus a dependency-free server that checks all of it and
 validates with the same field definitions as the browser.
+
+Rather not run a server at all? [PixiForm Cloud](https://cloud.pixiformui.lets.gen.in/) hosts the backend: end-to-end
+encrypted submissions, webhooks and alerts, with a free plan. Help and enterprise: ravindra.suthar@me.com.

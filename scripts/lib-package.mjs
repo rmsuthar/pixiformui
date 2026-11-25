@@ -12,8 +12,11 @@ const pkg = {
   keywords: [
     'form', 'forms', 'secure', 'security', 'canvas', 'password', 'encryption', 'validation',
     'accessibility', 'web-component', 'react', 'angular', 'typescript', 'otp', 'date-picker', 'phone-input', 'csp',
+    'form-backend', 'encrypted-forms', 'end-to-end-encryption', 'cloud', 'webhooks',
   ],
   homepage: 'https://pixiformui.lets.gen.in',
+  // npm prints "packages are looking for funding" after install; `npm fund` shows this link.
+  funding: { type: 'individual', url: 'https://pixiformui.lets.gen.in/pro/' },
   bugs: repo ? { url: `${repo}/issues`, email: 'ravindra.suthar@me.com' } : { email: 'ravindra.suthar@me.com' },
   ...(repo ? { repository: { type: 'git', url: `git+${repo}.git` } } : {}),
   license: 'MIT',

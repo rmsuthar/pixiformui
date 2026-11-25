@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.8
 
+- **PixiForm Cloud** is promoted where developers look: a section near the top of the npm README ("No server? Use
+  PixiForm Cloud", free plan), a PixiForm Cloud section and a Support and contact section; npm's funding notice after
+  `npm install` (`npm fund`) links to the Pro & Cloud page; `npm create pixiformui` mentions Cloud and support when it
+  finishes. No install scripts.
+- The README quotes the bundle size measured at build time (≈66 KB gzipped) instead of a hard-coded number.
 - **Docs:** the guide now shows every control, layout and widget as rendered by the library: control anatomy,
   each control in its typical states (open select and calendar, errors, password strength…), `Column` gaps, `Row`
   side by side and stacked, `FieldGroup` variants and states, toasts, the privacy screen, and conditional fields

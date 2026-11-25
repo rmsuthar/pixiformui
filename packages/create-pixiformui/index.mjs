@@ -121,6 +121,12 @@ ${cd}    npm install
 
   The demo form is in src/form.ts, its fields in shared/fields.js (used by the
   browser and the server), and the API in server/app.mjs. See README.md.
+
+  ${bold('Rather not run a server?')} PixiForm Cloud hosts the backend for you:
+  end-to-end encrypted submissions, webhooks and alerts. Free plan, no card:
+  ${dim('https://cloud.pixiformui.lets.gen.in')}
+
+  Help and enterprise: ravindra.suthar@me.com · Docs: https://pixiformui.lets.gen.in/docs/
 `);
   } finally {
     rl?.close();

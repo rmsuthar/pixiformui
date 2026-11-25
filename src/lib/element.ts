@@ -32,7 +32,11 @@ export interface PixiFormSubmitDetail {
  *   pixiform-submit  { values, respondWith } only when neither config.onSubmit nor config.action is set
  *   pixiform-analytics AnalyticsEvent       only when config.analytics is set (e.g. `analytics: {}`)
  */
-export class PixiFormElement extends HTMLElement {
+// On a server (SSR) there's no HTMLElement: a stand-in base lets the module load; the element only
+// works in a browser, where definePixiFormElement() registers it.
+const ElementBase: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} as unknown as typeof HTMLElement) : HTMLElement;
+
+export class PixiFormElement extends ElementBase {
   #config: PixiFormElementConfig | null = null;
   #handle: PixiFormHandle | null = null;
   #generation = 0;
@@ -175,6 +179,7 @@ export class PixiFormElement extends HTMLElement {
 
 /** Registers the element (idempotent). Default tag: `pixi-form`. */
 export function definePixiFormElement(tag = 'pixi-form'): void {
+  if (typeof customElements === 'undefined') return; // server-side rendering: nothing to register
   if (!customElements.get(tag)) customElements.define(tag, class extends PixiFormElement {});
 }
 

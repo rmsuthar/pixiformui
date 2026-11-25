@@ -10,8 +10,12 @@
 - **Hidden fields:** `{ type: 'hidden', name, value }` (`HiddenField`) submits a value that is never drawn and isn't
   in the page's markup.
 - The human-check slider keeps its prompt text clear of the mark.
-- **`npm create pixiformui`** (new package `create-pixiformui`): scaffolds a vanilla TypeScript or React app with a
-  demo form and a dependency-free Node server (CSRF, encrypted passwords, proof-of-work, idempotency, and validation
+- **Server-side rendering:** `pixiformui` can now be imported in server code (Next.js, Remix, Astro…) without a DOM;
+  `mountPixiForm()` explains that it runs in the browser if called on a server. New `pixiformui/ssr` entry with `pixiformSkeleton(config)`
+  and `PIXIFORM_SKELETON_CSS` to render a CSP-safe placeholder (title, labels, button, sized like the form, `showIf`
+  applied) that the form replaces on its first frame, avoiding layout shift. The React wrapper takes a `skeleton` prop.
+- **`npm create pixiformui`** (new package `create-pixiformui`): scaffolds a vanilla TypeScript, React or Next.js (SSR)
+  app with a demo form and a dependency-free Node server (CSRF, encrypted passwords, proof-of-work, idempotency, and validation
   with the same field definitions and showIf rules as the browser).
 
 ## 0.1.6

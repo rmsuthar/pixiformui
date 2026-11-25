@@ -41,6 +41,7 @@ reference server. This guide covers everything you need to build, style, extend,
 28. [Preventing duplicate submissions](#28-preventing-duplicate-submissions)
 29. [Protecting forms from bots](#29-protecting-forms-from-bots)
 30. [Conditional and hidden fields](#30-conditional-and-hidden-fields)
+31. [Server-side rendering (Next.js, Remix, Astro…)](#31-server-side-rendering-nextjs-remix-astro)
 
 ---
 
@@ -2513,3 +2514,61 @@ and a `showIf` on a hidden field decides whether it's sent.
 
 Anyone can still change what their browser sends, so treat hidden values as untrusted input on the server. Never use
 one for prices, permissions or secrets; look those up on the server from the id instead.
+
+---
+
+## 31. Server-side rendering (Next.js, Remix, Astro…)
+
+PixiFormUI draws forms on a canvas, so the form itself renders in the browser. Everything around it works with
+server-side rendering:
+
+- **`pixiformui` is safe to import in server code.** Importing it needs no `window`, `document` or `HTMLElement`, so
+  server components, route handlers and SSR builds can import it (for example to share a config, or to use
+  `evaluateCondition()`).
+- **`mountPixiForm()` runs in the browser.** Call it after the page loads: in `useEffect` (React), `onMounted`
+  (Vue), `onMount` (Svelte) or `ngAfterViewInit` (Angular). Called on a server, it throws a clear error.
+- **A server-rendered placeholder.** `pixiformSkeleton(config)` from `pixiformui/ssr` (a small separate entry point,
+  so it stays out of your browser bundle) returns HTML with the form's title, labels and
+  button, sized like the real controls (with `showIf` rules applied to the initial values). Render it inside the
+  element you mount on; the form replaces it on its first frame. The page doesn't jump when the form appears, and
+  visitors without JavaScript, and search engines, still see what the form asks for. Hidden-field values are never
+  printed.
+
+```ts
+// On the server (any framework): the placeholder and its CSS
+import { pixiformSkeleton, PIXIFORM_SKELETON_CSS } from 'pixiformui/ssr';
+const html = `<style>${PIXIFORM_SKELETON_CSS}</style><div id="signup">${pixiformSkeleton(config)}</div>`;
+
+// In the browser
+import { mountPixiForm } from 'pixiformui';
+mountPixiForm(document.getElementById('signup')!, config); // swaps the placeholder for the form
+```
+
+The skeleton uses classes only (no inline styles or scripts), so it works under a strict CSP: put
+`PIXIFORM_SKELETON_CSS` in your stylesheet, or in a `<style>` tag with your CSP nonce. It follows the visitor's
+light or dark mode, and a `<noscript>` message (`opts.noScriptMessage`) tells visitors without JavaScript that the
+form needs it.
+
+### React and Next.js
+
+The React wrapper (`examples/react/src/PixiForm.tsx`) takes a `skeleton` prop. In Next.js, mark it as a client
+component (`'use client'` at the top) and render it from any page:
+
+```tsx
+// app/SignupForm.tsx
+'use client';
+import { PixiForm } from './PixiForm';
+import { formConfig } from '../src/form';
+
+export function SignupForm() {
+  return <PixiForm config={formConfig} skeleton />;
+}
+```
+
+The server HTML then holds the placeholder; in the browser, the component mounts the form over it. Add
+`PIXIFORM_SKELETON_CSS` once, for example in `app/layout.tsx`:
+`<style dangerouslySetInnerHTML={{ __html: PIXIFORM_SKELETON_CSS }} />`.
+
+For a complete, working setup, run `npm create pixiformui@latest my-app -- --template next`. It includes route
+handlers for the session and sign-up endpoints, with CSRF, encrypted passwords, proof-of-work, idempotency and
+validation from the same field definitions as the browser.

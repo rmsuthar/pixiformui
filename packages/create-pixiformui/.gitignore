@@ -1,3 +1,4 @@
 templates/_shared/server/lib/
 templates/react/src/PixiForm.tsx
+templates/next/app/PixiForm.tsx
 LICENSE

@@ -25,7 +25,7 @@ export interface PhoneInputOptions extends ControlOptions<string> {
   autocomplete?: boolean;
 }
 
-const IS_WINDOWS = /Win/.test(navigator.platform || navigator.userAgent);
+const IS_WINDOWS = typeof navigator !== 'undefined' && /Win/.test(navigator.platform || navigator.userAgent || '');
 
 /** Number part: digits/spaces only, and hands international input (+…, 00…) to the parent. */
 class NationalNumberField extends TextInput {

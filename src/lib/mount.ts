@@ -224,6 +224,9 @@ function resolveTheme(input: ThemeInput | undefined, mode: 'light' | 'dark'): Th
 
 // ------------------------------------------------------------------ mount
 export async function mountPixiForm(host: HTMLElement, config: PixiFormConfig): Promise<PixiFormHandle> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('mountPixiForm() runs in the browser only. With SSR, call it after the page loads (useEffect, onMounted, onMount, ngAfterViewInit) and render pixiformSkeleton(config) from pixiformui/ssr on the server in its place.');
+  }
   if (!(host instanceof HTMLElement)) throw new Error('mountPixiForm: host must be an HTMLElement');
   const events = new FormEvents();
   events.addAll(config.on);
@@ -315,6 +318,9 @@ async function mountInner(
   canvas.style.userSelect = 'none';
   canvas.style.setProperty('-webkit-tap-highlight-color', 'transparent');
   canvas.style.setProperty('-webkit-touch-callout', 'none');
+  // A server-rendered pixiformSkeleton() stays until the first frame, then the canvas takes its place.
+  const skeletons = [...host.children].filter((el) => el.hasAttribute('data-pixiform-skeleton'));
+  if (skeletons.length) canvas.style.display = 'none';
   host.appendChild(canvas);
 
   const ui = new FormUI(app, {
@@ -675,6 +681,11 @@ async function mountInner(
   const onFirstPaint = () => {
     app.renderer.off('postrender', onFirstPaint);
     if (destroyed) return;
+    if (skeletons.length) {
+      skeletons.forEach((el) => el.remove());
+      canvas.style.display = '';
+      schedule(); // re-measure now that the canvas takes part in layout
+    }
     state = 'ready';
     setState('ready');
     const detail = { ms: Math.round(performance.now() - t0), fields: Object.keys(controls).length, width: app.screen.width, height: app.screen.height };

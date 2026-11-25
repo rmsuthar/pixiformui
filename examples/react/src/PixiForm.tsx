@@ -7,9 +7,12 @@
  * - Safe under <StrictMode> double-mounting and async races.
  * - Pass a NEW config object to rebuild the form; memoise it (useMemo) to avoid rebuilds.
  * - `theme`/`mode` props update live without rebuilding.
+ * - `skeleton`: with server-side rendering (Next.js, Remix…), puts a lightweight placeholder with the
+ *   labels in the server HTML; the form replaces it on its first frame (include PIXIFORM_SKELETON_CSS).
  */
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { mountPixiForm, type PixiFormConfig, type PixiFormHandle, type ThemeInput } from 'pixiformui';
+import { pixiformSkeleton } from 'pixiformui/ssr';
 
 export interface PixiFormProps {
   config: PixiFormConfig;
@@ -18,9 +21,11 @@ export interface PixiFormProps {
   onReady?: (handle: PixiFormHandle) => void;
   className?: string;
   style?: CSSProperties;
+  /** Render a placeholder until the form mounts (useful with SSR). */
+  skeleton?: boolean;
 }
 
-export function PixiForm({ config, theme, mode, onReady, className, style }: PixiFormProps) {
+export function PixiForm({ config, theme, mode, onReady, className, style, skeleton }: PixiFormProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<PixiFormHandle | null>(null);
   const onReadyRef = useRef(onReady);
@@ -49,5 +54,7 @@ export function PixiForm({ config, theme, mode, onReady, className, style }: Pix
     if (handleRef.current && (theme || mode)) handleRef.current.setTheme(theme ?? config.theme ?? 'indigo', mode);
   }, [theme, mode, config.theme]);
 
-  return <div ref={hostRef} className={className} style={style} />;
+  // Same string on the server and in the browser, so hydration matches; the form removes it.
+  const placeholder = useMemo(() => (skeleton ? { __html: pixiformSkeleton(config) } : undefined), [skeleton, config]);
+  return <div ref={hostRef} className={className} style={style} dangerouslySetInnerHTML={placeholder} suppressHydrationWarning />;
 }

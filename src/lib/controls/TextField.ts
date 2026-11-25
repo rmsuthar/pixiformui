@@ -47,7 +47,7 @@ interface Snapshot {
   anchor: number;
 }
 
-const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
 const WORD_CHAR = /[\p{L}\p{N}_]/u;
 const HISTORY_LIMIT = 100;
 

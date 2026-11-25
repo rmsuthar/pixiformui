@@ -24,9 +24,10 @@ const pkg = {
   exports: {
     '.': { types: './types/src/lib/index.d.ts', import: './pixiformui.js' },
     './standalone': { types: './types/src/lib/standalone.d.ts', import: './pixiformui.standalone.js' },
+    './ssr': { types: './types/src/lib/ssr.d.ts', import: './pixiformui-ssr.js' },
     './package.json': './package.json',
   },
-  files: ['pixiformui.js', 'pixiformui.js.map', 'pixiformui.standalone.js', 'pixiformui.standalone.js.map', 'types', 'README.md', 'LICENSE'],
+  files: ['pixiformui.js', 'pixiformui.js.map', 'pixiformui.standalone.js', 'pixiformui.standalone.js.map', 'pixiformui-ssr.js', 'pixiformui-ssr.js.map', 'types', 'README.md', 'LICENSE'],
   sideEffects: ['./pixiformui.standalone.js', './pixiformui.js'],
   engines: { node: '>=18' },
   publishConfig: { access: 'public' },

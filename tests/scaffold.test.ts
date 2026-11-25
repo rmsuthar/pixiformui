@@ -16,17 +16,23 @@ const base = { source: 'x', fullName: 'Ada', email: 'ada@example.com', password:
 
 test('CLI scaffolds each template with the name filled in', () => {
   const dir = mkdtempSync(join(tmpdir(), 'cpf-'));
+  const own: Record<string, string[]> = {
+    vanilla: ['server/server.mjs', 'src/main.ts', 'src/style.css', 'index.html'],
+    react: ['server/server.mjs', 'src/App.tsx', 'src/PixiForm.tsx', 'vite.config.ts'],
+    next: ['app/page.tsx', 'app/PixiForm.tsx', 'app/api/signup/route.ts', 'app/api/session/route.ts', 'next.config.mjs'],
+  };
   try {
-    for (const t of ['vanilla', 'react']) {
+    for (const t of Object.keys(own)) {
       execFileSync(process.execPath, [cli, join(dir, `My App ${t}`), '--template', t], { stdio: 'pipe' });
       const app = join(dir, `My App ${t}`);
       const p = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
       assert.equal(p.name, `my-app-${t}`);
       assert.match(p.dependencies.pixiformui, /^\^\d+\.\d+\.\d+$/);
-      for (const f of ['.gitignore', 'server/server.mjs', 'server/lib/pfe.mjs', 'shared/fields.js', 'src/form.ts', 'README.md']) assert.ok(existsSync(join(app, f)), f);
-      assert.ok(!readFileSync(join(app, 'server/server.mjs'), 'utf8').includes('{{'), 'placeholders replaced');
+      for (const f of ['.gitignore', 'server/app.mjs', 'server/lib/pfe.mjs', 'shared/fields.js', 'src/form.ts', 'README.md', ...own[t]]) assert.ok(existsSync(join(app, f)), `${t}: ${f}`);
+      if (t === 'next') assert.ok(!existsSync(join(app, 'server/server.mjs')), 'next uses route handlers, not the Node server');
+      for (const f of ['README.md', 'package.json']) assert.ok(!readFileSync(join(app, f), 'utf8').includes('{{'), `${t}: placeholders replaced in ${f}`);
     }
-    assert.ok(existsSync(join(dir, 'My App react/src/PixiForm.tsx')));
+    assert.match(readFileSync(join(dir, 'My App next/app/PixiForm.tsx'), 'utf8'), /^'use client';/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

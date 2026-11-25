@@ -1,6 +1,8 @@
-// Sessions, CSRF tokens, encryption challenges, proof-of-work and idempotency for the starter server.
-// In-memory stores keep the starter dependency-free; use Redis or your database when you run more
-// than one server process.
+// Sessions, CSRF tokens, proof-of-work, rate limits and idempotency for the starter server.
+// Framework-neutral: everything takes a plain `headers` object (lower-case names).
+// The in-memory store keeps the starter dependency-free; use Redis or your database when you run
+// more than one server process. It lives on globalThis so dev reloads and bundlers that load this
+// file more than once (e.g. one copy per Next.js route) share it.
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { checkPow, parsePowToken } from './lib/pow.mjs';
 
@@ -11,74 +13,76 @@ export const POW_DIFFICULTY = Math.max(0, Math.min(26, Number(process.env.POW_DI
 /** Minimum time between loading the form and submitting it. */
 export const MIN_FILL_MS = Math.max(0, Number(process.env.MIN_FILL_MS ?? 2000) || 0);
 
+export const store = (globalThis.__pixiformStarter ??= { sessions: new Map(), users: new Map(), hits: new Map() });
+
 const token = (n = 24) => randomBytes(n).toString('base64url');
-const sessions = new Map();
-
 export const newPow = () => ({ challenge: token(18), difficulty: POW_DIFFICULTY });
+export const newChallenge = () => token(16);
 
-function cookies(req) {
-  const out = {};
-  for (const part of (req.headers.cookie ?? '').split(';')) {
+function cookie(headers, name) {
+  for (const part of String(headers.cookie ?? '').split(';')) {
     const i = part.indexOf('=');
-    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
   }
-  return out;
+  return undefined;
 }
 
-/** The caller's session, creating one (and setting its cookie) when `create` is true. */
-export function getSession(req, res, { create = false, secure = false } = {}) {
+/**
+ * The caller's session. With `create`, makes one when missing and returns the Set-Cookie value
+ * to send: `{ session, setCookie }`.
+ */
+export function getSession(headers, { create = false, secure = false } = {}) {
   const now = Date.now();
-  const sid = cookies(req).pf_sid;
-  let s = sid && sessions.get(sid);
+  const sid = cookie(headers, 'pf_sid');
+  let s = sid ? store.sessions.get(sid) : undefined;
   if (s && now - s.seen > SESSION_TTL) {
-    sessions.delete(sid);
+    store.sessions.delete(sid);
     s = undefined;
   }
+  let setCookie;
   if (!s && create) {
-    if (sessions.size >= MAX_SESSIONS) for (const [k, v] of sessions) if (now - v.seen > SESSION_TTL) sessions.delete(k);
+    if (store.sessions.size >= MAX_SESSIONS) for (const [k, v] of store.sessions) if (now - v.seen > SESSION_TTL) store.sessions.delete(k);
     const id = token(32);
-    s = { id, csrf: token(), challenge: token(16), pow: newPow(), issuedAt: now, seen: now, idem: new Map() };
-    sessions.set(id, s);
-    res.setHeader('Set-Cookie', `pf_sid=${id}; Path=/; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}; Max-Age=${SESSION_TTL / 1000}`);
+    s = { id, csrf: token(), challenge: newChallenge(), pow: newPow(), issuedAt: now, seen: now, idem: new Map() };
+    store.sessions.set(id, s);
+    setCookie = `pf_sid=${id}; Path=/; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}; Max-Age=${SESSION_TTL / 1000}`;
   }
   if (s) s.seen = now;
-  return s ?? null;
+  return { session: s ?? null, setCookie };
 }
 
-export function csrfOk(req, s) {
-  const sent = Buffer.from(String(req.headers['x-csrf-token'] ?? ''));
+export function csrfOk(headers, s) {
+  const sent = Buffer.from(String(headers['x-csrf-token'] ?? ''));
   const want = Buffer.from(s.csrf);
   return sent.length === want.length && timingSafeEqual(sent, want);
 }
 
 /** Same-origin check: the Origin header (or Sec-Fetch-Site when a browser sends `Origin: null`). */
-export function sameOrigin(req, secure) {
-  const origin = req.headers.origin;
-  if (!origin) return req.headers['sec-fetch-site'] === 'same-origin' || !req.headers['sec-fetch-site'];
-  if (origin === 'null') return req.headers['sec-fetch-site'] === 'same-origin';
-  return origin === `${secure ? 'https' : 'http'}://${req.headers.host}`;
+export function sameOrigin(headers, secure) {
+  const origin = headers.origin;
+  const site = headers['sec-fetch-site'];
+  if (!origin) return site === 'same-origin' || !site;
+  if (origin === 'null') return site === 'same-origin';
+  return origin === `${secure ? 'https' : 'http'}://${headers.host}`;
 }
 
 /** Checks the X-Form-Proof header against the session's challenge (one hash). */
-export function proofOk(req, s) {
+export function proofOk(headers, s) {
   if (POW_DIFFICULTY === 0) return true;
-  const p = parsePowToken(req.headers['x-form-proof']);
+  const p = parsePowToken(headers['x-form-proof']);
   return !!p && p.challenge === s.pow.challenge && checkPow(s.pow, p.nonce);
 }
 
-/** Simple fixed-window rate limiter per key. */
-export function rateLimiter(limit, windowMs) {
-  const hits = new Map();
-  return (key) => {
-    const now = Date.now();
-    let h = hits.get(key);
-    if (!h || now - h.start > windowMs) {
-      if (hits.size > 100_000) hits.clear();
-      h = { start: now, count: 0 };
-      hits.set(key, h);
-    }
-    return ++h.count <= limit;
-  };
+/** Fixed-window rate limit: true while `key` is under `limit` hits per `windowMs`. */
+export function underLimit(key, limit, windowMs) {
+  const now = Date.now();
+  let h = store.hits.get(key);
+  if (!h || now - h.start > windowMs) {
+    if (store.hits.size > 100_000) store.hits.clear();
+    h = { start: now, count: 0 };
+    store.hits.set(key, h);
+  }
+  return ++h.count <= limit;
 }
 
 /**
@@ -86,8 +90,8 @@ export function rateLimiter(limit, windowMs) {
  * reply instead of being processed twice. Encrypted values differ on every attempt, so they're
  * normalised before hashing.
  */
-export function idempotency(req, s, body) {
-  const key = req.headers['idempotency-key'];
+export function idempotency(headers, s, body) {
+  const key = headers['idempotency-key'];
   if (typeof key !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(key)) return { key: null };
   const normal = JSON.stringify(body, (_k, v) => (typeof v === 'string' && v.startsWith('pfe1.') ? 'pfe1' : v));
   const hash = createHash('sha256').update(normal).digest('base64url');

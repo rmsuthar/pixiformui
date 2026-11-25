@@ -4,6 +4,7 @@
  *
  *   npm create pixiformui@latest my-app
  *   npm create pixiformui@latest my-app -- --template react
+ *   npm create pixiformui@latest my-app -- --template next
  *
  * No dependencies: Node's built-ins only.
  */
@@ -17,7 +18,10 @@ const pkg = JSON.parse(readFileSync(join(here, 'package.json'), 'utf8'));
 const TEMPLATES = {
   vanilla: 'TypeScript, no framework (Vite)',
   react: 'React 19 + TypeScript (Vite)',
+  next: 'Next.js 16 (App Router, server-side rendering)',
 };
+/** Extra file layers per template (applied after _shared, before the template itself). */
+const LAYERS = { vanilla: ['_vite'], react: ['_vite'], next: [] };
 const TEXT = /\.(m?[jt]sx?|json|html|css|md|txt)$|^_gitignore$/;
 
 const bold = (s) => (process.stdout.isTTY ? `\x1b[1m${s}\x1b[22m` : s);
@@ -105,8 +109,7 @@ async function main() {
     if (!isEmptyDir(target)) fail(`${dir} already exists and isn't empty. Pick another folder.`);
 
     const vars = { name: packageName(dir), pixiformuiVersion: process.env.PIXIFORMUI_VERSION ?? `^${pkg.version}`, template };
-    copyDir(join(here, 'templates', '_shared'), target, vars);
-    copyDir(join(here, 'templates', template), target, vars);
+    for (const layer of ['_shared', ...LAYERS[template], template]) copyDir(join(here, 'templates', layer), target, vars);
 
     const cd = dir === '.' ? '' : `    cd ${dir.includes(' ') ? JSON.stringify(dir) : dir}\n`;
     console.log(`
@@ -114,10 +117,10 @@ async function main() {
 
   Next:
 ${cd}    npm install
-    npm run dev          ${dim('# http://localhost:5173')}
+    npm run dev          ${dim(`# http://localhost:${template === 'next' ? 3000 : 5173}`)}
 
   The demo form is in src/form.ts, its fields in shared/fields.js (used by the
-  browser and the server), and the server in server/. See README.md.
+  browser and the server), and the API in server/app.mjs. See README.md.
 `);
   } finally {
     rl?.close();

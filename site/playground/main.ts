@@ -55,6 +55,7 @@ const PRESETS: Record<string, { label: string; config: Record<string, unknown> }
           ],
         },
         { type: 'checkbox', name: 'terms', label: 'I accept the terms', required: true },
+        { type: 'humancheck', name: 'human', label: 'Quick check' },
       ],
     },
   },
@@ -98,6 +99,20 @@ const PRESETS: Record<string, { label: string; config: Record<string, unknown> }
         { type: 'date', name: 'when', label: 'Date and time', required: true, min: 'today', time: { step: 30, defaultTime: '10:00' } },
         { type: 'slider', name: 'duration', label: 'Duration (minutes)', min: 15, max: 90, step: 15, value: 30 },
         { type: 'radio', name: 'channel', label: 'Channel', value: 'video', direction: 'horizontal', options: [{ value: 'video', label: 'Video' }, { value: 'phone', label: 'Phone' }] },
+      ],
+    },
+  },
+  humancheck: {
+    label: 'Human check (bot protection)',
+    config: {
+      title: 'Join the waitlist',
+      subtitle: 'Slide the handle onto the mark. It moves after a miss.',
+      theme: 'slate',
+      maxWidth: 480,
+      submitText: 'Join',
+      fields: [
+        { type: 'email', name: 'email', label: 'Email', required: true, placeholder: 'you@example.com' },
+        { type: 'humancheck', name: 'human', label: 'Quick check', prompt: 'Slide to the mark', maxAttempts: 3, cooldownMs: 15000 },
       ],
     },
   },

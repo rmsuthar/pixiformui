@@ -121,6 +121,8 @@ const demoFields: FieldConfig[] = [
     ],
   },
   { type: 'checkbox', name: 'terms', label: 'I accept the terms (demo)', required: true, requiredMessage: 'Please accept the terms.' },
+  // Slide-to-the-mark human check: the mark is random and drawn only on the canvas; not sent with the form.
+  { type: 'humancheck', name: 'human', label: 'Quick check', info: 'Drag the handle onto the mark. Keyboard: arrow keys, then Enter.' },
 ];
 
 async function demo(): Promise<void> {

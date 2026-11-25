@@ -438,11 +438,26 @@ export class HumanCheck extends Control<boolean> {
         .stroke({ width: 2, color: near ? c.success : c.textMuted, alpha: 0.8 });
     }
 
-    // Prompt text, centred in the free part of the track.
+    // Prompt text, centred in the larger free stretch of the track (never under the mark).
     this.promptText.text = this.solved ? 'Verified' : this.coolingDown ? 'Please wait…' : this.prompt;
     this.promptText.style = this.textStyle('helper', this.solved ? c.success : this._enabled ? c.textMuted : c.textDisabled);
-    this.promptText.visible = this.solved || this.pos < 0.05;
-    this.promptText.position.set(Math.round(x0 + hw / 2 + (this._width - x0 - hw / 2 - this.promptText.width) / 2), Math.round((h - this.promptText.height) / 2));
+    const tw = this.promptText.width;
+    const left = hx + hw / 2 + 8;
+    let px: number;
+    let room: number;
+    if (this.solved) {
+      px = left;
+      room = this._width - pad - 8 - left;
+    } else {
+      const mx = x0 + this.target * span;
+      const a = { from: left, to: mx - hw / 2 - 8 };
+      const b = { from: mx + hw / 2 + 8, to: this._width - pad - 8 };
+      const seg = a.to - a.from >= b.to - b.from ? a : b;
+      px = seg.from;
+      room = seg.to - seg.from;
+    }
+    this.promptText.visible = (this.solved || this.pos < 0.05) && room >= tw;
+    this.promptText.position.set(Math.round(px + (room - tw) / 2), Math.round((h - this.promptText.height) / 2));
 
     // Handle.
     const g = this.handle.clear();

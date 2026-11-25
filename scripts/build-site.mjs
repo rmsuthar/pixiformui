@@ -92,7 +92,7 @@ const CHAPTER_DESCRIPTIONS = {
 const pages = [];
 /** heading id → page url (for cross-page #anchor links) */
 const anchorPage = new Map();
-const docFile = { 'DEVELOPER_GUIDE.md': '/docs/guide/', 'ENCRYPTION.md': '/docs/encryption/', 'RENDERER.md': '/docs/renderer/' };
+const docFile = { 'DEVELOPER_GUIDE.md': '/docs/guide/', 'ENCRYPTION.md': '/docs/encryption/', 'RENDERER.md': '/docs/renderer/', 'PRIVACY.md': '/privacy/', 'TERMS.md': '/terms/' };
 
 function lex(md) {
   const marked = new Marked({ gfm: true });
@@ -126,6 +126,7 @@ function renderer(ids, pageUrl, toc) {
         const text = this.parser.parseInline(tokens);
         const t = title ? ` title="${esc(title)}"` : '';
         if (/^https?:\/\//.test(href)) return `<a href="${esc(href)}"${t} rel="noopener noreferrer">${text}</a>`;
+        if (href.startsWith('mailto:') || /^\/(?!\/)/.test(href)) return `<a href="${esc(href)}"${t}>${text}</a>`; // email and site pages
         if (href.startsWith('#')) {
           const id = decodeURIComponent(href.slice(1));
           const target = anchorPage.get(id);
@@ -222,8 +223,9 @@ function buildGuide() {
 }
 
 /** A single-page doc (encryption spec, renderer notes). */
-function buildSingle(src, url, nav, title) {
-  const { tokens, ids } = lex(brand(readFileSync(join(root, src), 'utf8')));
+function buildSingle(src, url, nav, title, opts = {}) {
+  const md = readFileSync(join(root, src), 'utf8');
+  const { tokens, ids } = lex(opts.raw ? md : brand(md)); // legal pages keep names exactly as written
   for (const t of tokens) if (t.type === 'heading') anchorPage.set(ids.get(t), { url, isChapter: null });
   return () => {
     const toc = [];
@@ -239,7 +241,7 @@ function buildSingle(src, url, nav, title) {
       html,
       toc: h2toc.length ? h2toc : toc,
       kind: 'article',
-      crumbs: [{ name: 'Docs', url: '/docs/' }, { name: nav, url }],
+      crumbs: opts.crumbs ?? [{ name: 'Docs', url: '/docs/' }, { name: nav, url }],
     });
   };
 }
@@ -247,8 +249,12 @@ function buildSingle(src, url, nav, title) {
 const chapters = buildGuide();
 const encryption = buildSingle('docs/ENCRYPTION.md', '/docs/encryption/', 'Encryption (PFE1)', 'PFE1 Encryption Spec: Encrypted Password Fields · PixiFormUI');
 const rendererDoc = buildSingle('docs/RENDERER.md', '/docs/renderer/', 'Renderer', 'Canvas 2D renderer · PixiFormUI');
+const privacyDoc = buildSingle('docs/PRIVACY.md', '/privacy/', 'Privacy policy', 'Privacy policy · PixiFormUI and PixiForm Cloud', { raw: true, crumbs: [{ name: 'Privacy policy', url: '/privacy/' }] });
+const termsDoc = buildSingle('docs/TERMS.md', '/terms/', 'Terms of service', 'Terms of service · PixiForm Cloud', { raw: true, crumbs: [{ name: 'Terms of service', url: '/terms/' }] });
 encryption();
 rendererDoc();
+privacyDoc();
+termsDoc();
 // ------------------------------------------------------------------ install page + versioned downloads
 const lib = JSON.parse(readFileSync(join(root, 'dist-lib/package.json'), 'utf8'));
 const files = ['pixiformui.standalone.js', 'pixiformui.js'];
@@ -529,7 +535,7 @@ ${p.html}
         ${pager}
       </main>
     </div>
-    <footer class="footer"><div class="wrap footer-inner"><span>© 2026 PixiFormUI</span><nav aria-label="Footer"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/#demo">Demo</a><a href="/releases/">Releases</a><a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a></nav></div></footer>
+    <footer class="footer"><div class="wrap footer-inner"><span>© 2026 PixiFormUI</span><nav aria-label="Footer"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/#demo">Demo</a><a href="/releases/">Releases</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a></nav></div></footer>
   </body>
 </html>
 `;

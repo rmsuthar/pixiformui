@@ -92,7 +92,7 @@ export function confirmationEmail(r: WaitlistRecord, cloudUrl: string, owner: st
     'You don’t have to wait to start: PixiForm Cloud is already live with a free plan. Create an end-to-end encrypted form for your website in about five minutes, with no server to run.',
   ];
   const after = ['Questions, or something you’d like us to build first? Just reply to this email: it comes straight to us.'];
-  const html = layout('You’re on the list', [...paras], { button: { label: 'Start free on PixiForm Cloud', url: cloudUrl }, footer: 'You received this because you joined the waitlist at pixiformui.lets.gen.in/pro/. We only email you about PixiFormUI Pro and Cloud; reply “remove” to be taken off the list.' }).replace(
+  const html = layout('You’re on the list', [...paras], { button: { label: 'Start free on PixiForm Cloud', url: cloudUrl }, footer: 'You received this because you joined the waitlist at pixiformui.lets.gen.in/pro/. We only email you about PixiFormUI Pro and Cloud; reply “remove” to be taken off the list. Privacy policy: pixiformui.lets.gen.in/privacy/' }).replace(
     '</td></tr>\n<tr><td style="padding:16px 6px',
     `<p style="margin:0 0 16px;font:15px/1.6 ${FONT};color:#111827">${esc(after[0])}</p></td></tr>\n<tr><td style="padding:16px 6px`,
   );

@@ -1,7 +1,7 @@
 // Builds the parts of the templates that come from this repository, so they never drift:
 //   - server/lib/{pfe,pow,conditions}.mjs from server/pfe.ts, shared/pow.ts, src/lib/conditions.ts
 //   - the React wrapper from examples/react/src/PixiForm.tsx (React and Next.js templates)
-//   - package.json version (same as the library)
+//   - package.json version (same as the library) and LICENSE
 // Run from the repository root: node packages/create-pixiformui/build.mjs
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { transform } from 'esbuild';
@@ -26,6 +26,8 @@ const wrapper = new URL('examples/react/src/PixiForm.tsx', root);
 copyFileSync(wrapper, new URL('templates/react/src/PixiForm.tsx', here));
 // Next.js: the same component, marked as a client component.
 writeFileSync(new URL('templates/next/app/PixiForm.tsx', here), `'use client';\n${readFileSync(wrapper, 'utf8')}`);
+
+copyFileSync(new URL('LICENSE', root), new URL('LICENSE', here));
 
 const version = JSON.parse(readFileSync(new URL('package.json', root), 'utf8')).version;
 const pkgFile = new URL('package.json', here);

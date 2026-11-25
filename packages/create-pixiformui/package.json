@@ -1,13 +1,28 @@
 {
   "name": "create-pixiformui",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Start a PixiFormUI app: a demo form and a secure Node server (CSRF, encrypted passwords, proof-of-work, idempotency, shared validation)",
-  "keywords": ["pixiformui", "create", "scaffold", "starter", "template", "form", "secure", "vite", "react"],
+  "keywords": [
+    "pixiformui",
+    "create",
+    "scaffold",
+    "starter",
+    "template",
+    "form",
+    "secure",
+    "vite",
+    "react"
+  ],
   "type": "module",
   "bin": {
     "create-pixiformui": "index.mjs"
   },
-  "files": ["index.mjs", "templates", "README.md", "LICENSE"],
+  "files": [
+    "index.mjs",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=20"
   },

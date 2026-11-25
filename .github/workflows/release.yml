@@ -57,6 +57,20 @@ jobs:
           done
           echo "::error::npm publish finished but pixiformui@$VERSION is not on the registry"
           exit 1
+      - name: Publish create-pixiformui (npm create pixiformui)
+        # Its templates depend on pixiformui@^VERSION, so it goes out after the library. The first publish of a
+        # new package can't use trusted publishing (npm needs the package to exist to configure it), so a failure
+        # here doesn't block the GitHub release: publish it by hand once, then add the trusted publisher on npmjs.com.
+        continue-on-error: true
+        run: |
+          node packages/create-pixiformui/build.mjs
+          cd packages/create-pixiformui
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "create-pixiformui@$VERSION" version >/dev/null 2>&1; then
+            echo "create-pixiformui@$VERSION is already on npm; skipping."
+            exit 0
+          fi
+          npm publish --provenance --access public
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

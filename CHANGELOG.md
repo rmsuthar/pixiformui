@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.7
 
 - **Conditional fields:** `showIf` on any field, group, heading or paragraph (`{ field, equals | notEquals | in |
   notIn | gt | gte | lt | lte | empty | filled }`, `all` / `any` / `not`, or a function). Hidden fields aren't

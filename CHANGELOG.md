@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.6
 
 - **Duplicate submissions:** `form.idempotencyKey` (stable across retries of the same values, including re-typed
   passwords) is sent as an `Idempotency-Key` header by the `action` option and by `secureSubmit({ idempotencyKey })`.

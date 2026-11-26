@@ -5,8 +5,8 @@
 // Scenes are defined in scripts/doc-images/harness.js. Output: 2x PNGs; the guide shows them at
 // half size (<img width="…">), so they stay sharp on high-density screens.
 import { createServer } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, extname, join, normalize, sep } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, extname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
@@ -18,14 +18,19 @@ if (!existsSync(join(root, 'dist-lib', 'pixiformui.js'))) {
 }
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.map': 'application/json', '.css': 'text/css' };
-const server = createServer((req, res) => {
-  let file;
-  try {
-    file = normalize(join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
-  } catch {
-    file = '';
+// Only the files the harness needs, listed up front: requests are looked up in this map, so the
+// URL never becomes a file-system path.
+const FILES = new Map();
+for (const dir of ['scripts/doc-images', 'dist-lib']) {
+  for (const entry of readdirSync(join(root, dir), { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const file = join(entry.parentPath, entry.name);
+    FILES.set('/' + relative(root, file).split(sep).join('/'), file);
   }
-  if (!file.startsWith(root + sep) || file.includes('\0') || !existsSync(file) || statSync(file).isDirectory()) {
+}
+const server = createServer((req, res) => {
+  const file = FILES.get(new URL(req.url, 'http://x').pathname);
+  if (!file) {
     res.writeHead(404).end();
     return;
   }
@@ -40,7 +45,7 @@ const page = await browser.newPage({ viewport: { width: 1400, height: 1000 }, de
 const problems = [];
 page.on('pageerror', (e) => problems.push(e.message));
 page.on('console', (m) => m.type() === 'error' && problems.push(m.text()));
-await page.goto(`http://localhost:${port}/scripts/doc-images/index.html`);
+await page.goto(`http://127.0.0.1:${port}/scripts/doc-images/index.html`);
 await page.waitForFunction(() => window.__docImages);
 const all = await page.evaluate(() => window.__docImages.names);
 const wanted = process.argv.slice(2).length ? process.argv.slice(2) : all;

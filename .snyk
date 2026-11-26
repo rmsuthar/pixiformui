@@ -1,0 +1,13 @@
+# Snyk policy: https://docs.snyk.io/manage-risk/policies/the-.snyk-file
+# Excluded from scans: tests (dummy credentials, local test servers) and developer scripts
+# (build, image and IndexNow tools run on a maintainer's machine, never deployed).
+# Everything that ships (src/, server/, site/, packages/) is still scanned.
+version: v1.25.0
+exclude:
+  global:
+    - tests/**
+    - scripts/**
+    - node_modules/**
+    - dist/**
+    - dist-lib/**
+    - dist-site/**

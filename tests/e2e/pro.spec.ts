@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, extname, join } from 'node:path';
+import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import worker, { type Env } from '../../site/worker.ts';
 import { focusField } from './helpers';
@@ -35,14 +35,15 @@ test.beforeAll(async () => {
       res.end(Buffer.from(await r.arrayBuffer()));
       return;
     }
-    let file = join(dist, decodeURIComponent(url.pathname));
+    let file = normalize(join(dist, decodeURIComponent(url.pathname)));
+    if (!file.startsWith(dist + sep) && file !== dist) return void res.writeHead(404).end();
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
     if (!existsSync(file)) return void res.writeHead(404).end();
     res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' });
     res.end(readFileSync(file));
   });
-  await new Promise<void>((r) => server.listen(0, r));
-  base = `http://localhost:${(server.address() as { port: number }).port}`;
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 });
 test.afterAll(() => server?.close());
 

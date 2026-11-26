@@ -6,7 +6,7 @@
 // half size (<img width="…">), so they stay sharp on high-density screens.
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
@@ -19,14 +19,20 @@ if (!existsSync(join(root, 'dist-lib', 'pixiformui.js'))) {
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.map': 'application/json', '.css': 'text/css' };
 const server = createServer((req, res) => {
-  const file = normalize(join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
-  if (!file.startsWith(root) || !existsSync(file) || statSync(file).isDirectory()) {
+  let file;
+  try {
+    file = normalize(join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
+  } catch {
+    file = '';
+  }
+  if (!file.startsWith(root + sep) || file.includes('\0') || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404).end();
     return;
   }
   res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' });
   res.end(readFileSync(file));
-}).listen(0);
+});
+await new Promise((r) => server.listen(0, '127.0.0.1', r)); // this machine only
 const port = server.address().port;
 
 const browser = await chromium.launch();

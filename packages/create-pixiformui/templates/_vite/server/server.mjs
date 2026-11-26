@@ -5,7 +5,7 @@
 // and serves the app.
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleSession, handleSignup, SECURE } from './app.mjs';
 
@@ -53,12 +53,22 @@ const send = (res, r) => {
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.map': 'application/json', '.woff2': 'font/woff2' };
 const dist = join(root, 'dist');
 
+const BAD_PATH = { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: 'Bad path.' };
+
 function serveStatic(req, res) {
-  let file = normalize(join(dist, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
-  if (!file.startsWith(dist)) return send(res, { status: 400, headers: {}, body: 'Bad path.' });
+  let rel;
+  try {
+    rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  } catch {
+    return send(res, BAD_PATH); // malformed %-encoding
+  }
+  if (rel.includes('\0')) return send(res, BAD_PATH);
+  let file = normalize(join(dist, rel));
+  // Only files inside dist/ (the separator check also rejects siblings such as dist-old/).
+  if (file !== dist && !file.startsWith(dist + sep)) return send(res, BAD_PATH);
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(dist, 'index.html');
   if (!existsSync(file)) return send(res, { status: 503, headers: { 'Content-Type': 'text/plain' }, body: 'Run `npm run build` first.' });
-  const immutable = file.startsWith(join(dist, 'assets'));
+  const immutable = file.startsWith(join(dist, 'assets') + sep);
   res.writeHead(200, { ...HEADERS, 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache' });
   createReadStream(file).pipe(res);
 }

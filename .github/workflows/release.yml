@@ -36,6 +36,15 @@ jobs:
       - run: npm test
       - name: Build the package
         run: npm run build:lib
+      - name: Snyk security scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            npx snyk test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
+            npx snyk monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform
+            npx snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform
+          fi
       - name: Publish to npm (with provenance)
         working-directory: dist-lib
         run: |

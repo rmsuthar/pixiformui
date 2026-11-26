@@ -21,7 +21,9 @@
     "stats": "node scripts/stats.mjs",
     "size": "node scripts/size-check.mjs",
     "docs:images": "node scripts/doc-images.mjs",
-    "waitlist": "node scripts/waitlist.mjs"
+    "waitlist": "node scripts/waitlist.mjs",
+    "snyk": "snyk test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 && snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4",
+    "snyk:report": "snyk monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform && snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",

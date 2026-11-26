@@ -1,7 +1,7 @@
 # Snyk policy: https://docs.snyk.io/manage-risk/policies/the-.snyk-file
-# Excluded from scans: tests (dummy credentials, local test servers) and developer scripts
-# (build, image and IndexNow tools run on a maintainer's machine, never deployed).
-# Everything that ships (src/, server/, site/, packages/) is still scanned.
+# Excluded from scans: tests (dummy credentials, local test servers), developer scripts,
+# and offline sample CLI decryptors in other languages (Java, Go, Python).
+# Everything that ships (src/, server/ runtime, site/, packages/) is still scanned.
 version: v1.25.0
 exclude:
   global:
@@ -11,3 +11,4 @@ exclude:
     - dist/**
     - dist-lib/**
     - dist-site/**
+    - server/decrypt/**

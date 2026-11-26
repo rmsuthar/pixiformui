@@ -9,7 +9,7 @@
  * No dependencies: Node's built-ins only.
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, normalize, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -105,7 +105,7 @@ async function main() {
     }
     if (!(template in TEMPLATES)) fail(`Unknown template "${template}". Choose one of: ${Object.keys(TEMPLATES).join(', ')}.`);
 
-    const target = resolve(dir);
+    const target = resolve(process.cwd(), normalize(dir));
     if (!isEmptyDir(target)) fail(`${dir} already exists and isn't empty. Pick another folder.`);
 
     const vars = { name: packageName(dir), pixiformuiVersion: process.env.PIXIFORMUI_VERSION ?? `^${pkg.version}`, template };

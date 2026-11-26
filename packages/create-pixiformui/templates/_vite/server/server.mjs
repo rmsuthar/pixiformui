@@ -45,6 +45,8 @@ const toRequest = (req) => ({
 });
 
 const send = (res, r) => {
+  res.setHeader('Content-Type', r.headers?.['Content-Type'] ?? 'application/json; charset=utf-8');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.writeHead(r.status, { ...HEADERS, ...r.headers });
   res.end(r.body);
 };
@@ -63,13 +65,14 @@ function serveStatic(req, res) {
     return send(res, BAD_PATH); // malformed %-encoding
   }
   if (rel.includes('\0')) return send(res, BAD_PATH);
-  let file = normalize(join(dist, rel));
+  const safeRel = normalize(rel).replace(/^(\.\.(\/|\\|$))+/, '');
+  let file = resolve(dist, '.' + sep + safeRel);
   // Only files inside dist/ (the separator check also rejects siblings such as dist-old/).
   if (file !== dist && !file.startsWith(dist + sep)) return send(res, BAD_PATH);
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(dist, 'index.html');
-  if (!existsSync(file)) return send(res, { status: 503, headers: { 'Content-Type': 'text/plain' }, body: 'Run `npm run build` first.' });
+  if (!existsSync(file) || (!file.startsWith(dist + sep) && file !== dist)) return send(res, { status: 503, headers: { 'Content-Type': 'text/plain' }, body: 'Run `npm run build` first.' });
   const immutable = file.startsWith(join(dist, 'assets') + sep);
-  res.writeHead(200, { ...HEADERS, 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache' });
+  res.writeHead(200, { ...HEADERS, 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache' });
   createReadStream(file).pipe(res);
 }
 

@@ -124,8 +124,9 @@ function securityHeaders(res: ServerResponse): void {
 
 function json(res: ServerResponse, status: number, body: unknown, extra: Record<string, string> = {}): void {
   const data = JSON.stringify(body);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(data),
     'Cache-Control': 'no-store',
     ...extra,
@@ -452,8 +453,8 @@ async function applyIdempotency(req: IncomingMessage, res: ServerResponse, path:
   try {
     raw = await readBody(req);
   } catch (e) {
-    const status = (e as { status?: number }).status ?? 400;
-    json(res, status, { ok: false, message: status === 413 ? 'Request too large.' : 'Bad request.' });
+    const isTooLarge = typeof e === 'object' && e !== null && 'status' in e && (e as { status: unknown }).status === 413;
+    json(res, isTooLarge ? 413 : 400, { ok: false, message: isTooLarge ? 'Request too large.' : 'Bad request.' });
     return true;
   }
   (req as IncomingMessage & { rawBody?: string }).rawBody = raw;
@@ -473,6 +474,8 @@ async function applyIdempotency(req: IncomingMessage, res: ServerResponse, path:
     res.statusCode = existing.status!;
     for (const [k, v] of Object.entries(existing.headers ?? {})) res.setHeader(k, v);
     res.setHeader('Idempotency-Replayed', 'true');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.end(existing.body);
     return true;
   }
@@ -688,7 +691,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
         console.log(`[passkey] registered for ${pending.username} (${passkeys.size} total)`);
         return json(res, 201, { ok: true, message: `Passkey created. You're signed in as ${pending.username}.`, username: pending.username });
       } catch (e) {
-        return json(res, 400, { ok: false, message: `Passkey could not be verified (${(e as Error).message}).` });
+        console.error('[passkey:register]', (e as Error).message);
+        return json(res, 400, { ok: false, message: 'Passkey could not be verified.' });
       }
     }
 
@@ -714,7 +718,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
         session.user = stored.username;
         return json(res, 200, { ok: true, message: `Signed in as ${stored.username} with a passkey.`, username: stored.username });
       } catch (e) {
-        return json(res, 400, { ok: false, message: `Passkey sign-in failed (${(e as Error).message}).` });
+        console.error('[passkey:login]', (e as Error).message);
+        return json(res, 400, { ok: false, message: 'Passkey sign-in failed.' });
       }
     }
     return json(res, 404, { ok: false, message: 'Not found.' });
@@ -760,8 +765,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('shape');
       payload = { ...(parsed as Record<string, unknown>) };
     } catch (e) {
-      const status = (e as { status?: number }).status ?? 400;
-      return reply(status, { ok: false, message: status === 413 ? 'Request too large.' : 'Malformed JSON.' });
+      const isTooLarge = typeof e === 'object' && e !== null && 'status' in e && (e as { status: unknown }).status === 413;
+      return reply(isTooLarge ? 413 : 400, { ok: false, message: isTooLarge ? 'Request too large.' : 'Malformed JSON.' });
     }
 
     // Decrypt secret fields. Plaintext (non-envelope) values are refused.
@@ -837,7 +842,8 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, path: stri
     return json(res, 400, { message: 'Bad path.' });
   }
   if (rel.includes('\0')) return json(res, 400, { message: 'Bad path.' });
-  let file = normalize(join(DIST, rel));
+  const safePath = normalize(rel).replace(/^(\.\.(\/|\\|$))+/, '');
+  let file = resolve(DIST, '.' + sep + safePath);
   if (file !== DIST && !file.startsWith(DIST + sep)) return json(res, 403, { message: 'Forbidden.' });
   try {
     const st = await stat(file);
@@ -845,12 +851,14 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, path: stri
   } catch {
     file = join(DIST, 'index.html'); // SPA fallback
   }
+  if (file !== DIST && !file.startsWith(DIST + sep)) return json(res, 403, { message: 'Forbidden.' });
   const ext = extname(file);
   const type = MIME[ext];
   if (!type) return json(res, 404, { message: 'Not found.' });
   const body = await readFile(file);
+  res.setHeader('Content-Type', type);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.writeHead(200, {
-    'Content-Type': type,
     'Content-Length': body.length,
     'Cache-Control': file.includes(`${sep}assets${sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache',
   });

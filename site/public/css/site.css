@@ -1276,3 +1276,50 @@ h1 {
   color: #067647;
   background: #ecfdf3;
 }
+/* ------------------------------------------------------------------ starter (create-pixiformui) */
+.starter {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+.starter-cmd pre {
+  margin: 0 0 12px;
+}
+.starter-cmd .muted,
+.starter-cloud {
+  color: var(--muted);
+  font-size: 14.5px;
+}
+.starter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.starter-list li {
+  padding-left: 28px;
+  position: relative;
+  color: var(--muted);
+}
+.starter-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+.starter-list b {
+  display: block;
+  color: var(--text);
+}
+.starter-cloud {
+  margin-top: 18px;
+}
+@media (max-width: 820px) {
+  .starter {
+    grid-template-columns: 1fr;
+  }
+}

@@ -305,6 +305,10 @@ pages.push({
   description: `Install PixiFormUI ${version} from npm, load it from a CDN, or self-host the bundle with Subresource Integrity hashes. MIT licensed.`,
   html: `<h1>Install</h1>
 <p>Current version: <strong>${version}</strong> · MIT licence · zero dependencies · <a href="/releases/">Release notes</a></p>
+<h2 id="starter">Start a new project</h2>
+<p><a href="https://www.npmjs.com/package/create-pixiformui" rel="noopener noreferrer"><code>create-pixiformui</code></a> scaffolds a working app with a demo form and a secure server (sessions, CSRF, encrypted passwords, proof-of-work, duplicate protection and validation with the same rules as the browser):</p>
+${code('npm create pixiformui@latest my-app\ncd my-app && npm install && npm run dev')}
+<p>Templates: <code>vanilla</code> (TypeScript and Vite), <code>react</code> (React 19) and <code>next</code> (Next.js with server-side rendering), e.g. <code>npm create pixiformui@latest my-app -- --template next</code>. Prefer not to run a server? Use <a href="https://cloud.pixiformui.lets.gen.in/">PixiForm Cloud</a>.</p>
 <h2 id="npm">npm (React, Angular, Vue, Svelte, any bundler)</h2>
 ${code('npm install pixiformui')}
 ${code(`import { mountPixiForm } from 'pixiformui';\n\nconst form = await mountPixiForm(document.getElementById('signup'), {\n  fields: [{ type: 'email', name: 'email', label: 'Email', required: true }],\n  onSubmit: async (values) => ({ ok: true, message: 'Saved' }),\n});`)}
@@ -332,6 +336,7 @@ ${olderHtml}
 <h2 id="licence">Licence and support</h2>
 <p>PixiFormUI is released under the MIT licence. Questions or integration help: <a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a> · <a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a>.</p>`,
   toc: [
+    { id: 'starter', text: 'Start a new project' },
     { id: 'npm', text: 'npm' },
     { id: 'self-host', text: 'Self-hosted' },
     { id: 'cdn', text: 'CDN with integrity' },

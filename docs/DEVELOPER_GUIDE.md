@@ -76,6 +76,17 @@ navigation matter more than the protections above (see [§18](#18-accessibility)
 
 ## 2. Getting started
 
+**Starting your own app?** The fastest way is the starter, which creates a working project with a demo form and a
+secure server ([create-pixiformui on npm](https://www.npmjs.com/package/create-pixiformui)):
+
+```bash
+npm create pixiformui@latest my-app            # TypeScript + Vite
+npm create pixiformui@latest my-app -- --template react
+npm create pixiformui@latest my-app -- --template next   # server-side rendering
+```
+
+The rest of this chapter is about running this repository (the library, its reference server and demo).
+
 ### Prerequisites
 
 - **Node.js ≥ 22.6**. The server and tests run TypeScript directly with `--experimental-strip-types`.

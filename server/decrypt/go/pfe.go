@@ -1,4 +1,4 @@
-// PFE1 decryptor for Go 1.24+ (standard library only).
+// PFE1 decryptor for Go 1.26.11+ (standard library only; earlier Go releases have security fixes missing in crypto/x509 and os).
 //
 //	plaintext, err := OpenEnvelope(envelope, priv, challenge+"|"+field)
 //	defer clear(plaintext)

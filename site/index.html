@@ -24,7 +24,7 @@
     <link rel="alternate" type="application/atom+xml" title="PixiFormUI releases" href="/releases/feed.xml" />
     <link rel="stylesheet" href="/css/site.css" />
     <script src="/js/menu.js" defer></script>
-    <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "name": "PixiFormUI", "url": "https://pixiformui.lets.gen.in/", "inLanguage": "en"}, {"@type": "SoftwareApplication", "name": "PixiFormUI", "applicationCategory": "DeveloperApplication", "applicationSubCategory": "JavaScript form library", "operatingSystem": "Any (web browser)", "url": "https://pixiformui.lets.gen.in/", "image": "https://pixiformui.lets.gen.in/og-image.png", "description": "Secure JavaScript form library that renders fields on a canvas, with encrypted password fields, shared validation rules, accessibility support and privacy-safe analytics.", "codeRepository":"https://github.com/rmsuthar/pixiformui","license":"https://opensource.org/licenses/MIT","softwareHelp": "https://pixiformui.lets.gen.in/docs/guide/", "featureList": ["Canvas-rendered fields: typed values never enter the DOM", "End-to-end encrypted password fields (ECDH P-256, AES-256-GCM)", "Shared validation rules for browser, server and AI agents", "Screen-reader outline, high contrast, reduced motion", "Privacy-safe analytics adapters", "Web component, React and Angular wrappers", "MCP server for AI assistants"]}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is PixiFormUI?", "acceptedAnswer": {"@type": "Answer", "text": "PixiFormUI is a JavaScript and TypeScript form library that draws every field on an HTML canvas. Typed values live in wipeable memory instead of the page DOM, so browser extensions, session-replay tools and injected scripts can't read them."}}, {"@type": "Question", "name": "How does it protect passwords?", "acceptedAnswer": {"@type": "Answer", "text": "Password fields never become JavaScript strings. On submit they are encrypted in the browser for your server's public key (ECDH P-256, HKDF-SHA256 and AES-256-GCM), bound to a single-use challenge, then wiped from memory. Decryptors are included for Node.js, Python, Go, C#, Ruby, PHP and Java."}}, {"@type": "Question", "name": "Is a canvas form accessible?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. A hidden accessibility outline gives screen readers headings, labelled groups, roles, states and linked error messages, and the forms follow high contrast, forced colors, reduced motion and browser zoom."}}, {"@type": "Question", "name": "Does it work with React, Angular or plain HTML?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Use the \u003cpixi-form> web component in plain HTML, the provided React and Angular wrappers, or the framework-agnostic mountPixiForm() function in Vue, Svelte or anything else."}}, {"@type": "Question", "name": "How big is it, and what does it depend on?", "acceptedAnswer": {"@type": "Answer", "text": "The complete standalone bundle is about __PIXIFORM_SIZE_KB__ KB gzipped and has no runtime dependencies. It needs no WebGL, no workers and no unsafe-eval, so it runs under a strict Content Security Policy."}}, {"@type": "Question", "name": "Can AI assistants fill in the forms?", "acceptedAnswer": {"@type": "Answer", "text": "Through the included MCP server, an assistant can validate and prefill a registration with non-secret details. The person then opens a single-use link and enters the password themselves, so secrets never pass through the AI."}}]}]}</script>
+    <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebSite", "name": "PixiFormUI", "url": "https://pixiformui.lets.gen.in/", "inLanguage": "en"}, {"@type": "SoftwareApplication", "name": "PixiFormUI", "applicationCategory": "DeveloperApplication", "applicationSubCategory": "JavaScript form library", "operatingSystem": "Any (web browser)", "url": "https://pixiformui.lets.gen.in/", "image": "https://pixiformui.lets.gen.in/og-image.png", "description": "Secure JavaScript form library that renders fields on a canvas, with encrypted password fields, shared validation rules, accessibility support and privacy-safe analytics.", "codeRepository":"https://github.com/rmsuthar/pixiformui","license":"https://opensource.org/licenses/MIT","softwareHelp": "https://pixiformui.lets.gen.in/docs/guide/", "featureList": ["Canvas-rendered fields: typed values never enter the DOM", "End-to-end encrypted password fields (ECDH P-256, AES-256-GCM)", "Shared validation rules for browser, server and AI agents", "Screen-reader outline, high contrast, reduced motion", "Privacy-safe analytics adapters", "Web component, React and Angular wrappers", "MCP server for AI assistants"]}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is PixiFormUI?", "acceptedAnswer": {"@type": "Answer", "text": "PixiFormUI is a JavaScript and TypeScript form library that draws every field on an HTML canvas. Typed values live in wipeable memory instead of the page DOM, so browser extensions, session-replay tools and injected scripts can't read them."}}, {"@type": "Question", "name": "How do I start a new project?", "acceptedAnswer": {"@type": "Answer", "text": "Run npm create pixiformui@latest my-app. It scaffolds a working app with a demo form and a secure server (templates: vanilla TypeScript, React or Next.js with server-side rendering). To add a form to an existing site without running a server, use PixiForm Cloud."}}, {"@type": "Question", "name": "How does it protect passwords?", "acceptedAnswer": {"@type": "Answer", "text": "Password fields never become JavaScript strings. On submit they are encrypted in the browser for your server's public key (ECDH P-256, HKDF-SHA256 and AES-256-GCM), bound to a single-use challenge, then wiped from memory. Decryptors are included for Node.js, Python, Go, C#, Ruby, PHP and Java."}}, {"@type": "Question", "name": "Is a canvas form accessible?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. A hidden accessibility outline gives screen readers headings, labelled groups, roles, states and linked error messages, and the forms follow high contrast, forced colors, reduced motion and browser zoom."}}, {"@type": "Question", "name": "Does it work with React, Angular or plain HTML?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Use the \u003cpixi-form> web component in plain HTML, the provided React and Angular wrappers, or the framework-agnostic mountPixiForm() function in Vue, Svelte or anything else."}}, {"@type": "Question", "name": "How big is it, and what does it depend on?", "acceptedAnswer": {"@type": "Answer", "text": "The complete standalone bundle is about __PIXIFORM_SIZE_KB__ KB gzipped and has no runtime dependencies. It needs no WebGL, no workers and no unsafe-eval, so it runs under a strict Content Security Policy."}}, {"@type": "Question", "name": "Can AI assistants fill in the forms?", "acceptedAnswer": {"@type": "Answer", "text": "Through the included MCP server, an assistant can validate and prefill a registration with non-secret details. The person then opens a single-use link and enters the password themselves, so secrets never pass through the AI."}}]}]}</script>
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
@@ -296,6 +296,49 @@ export class SignupComponent {
         </div>
       </section>
 
+      <!-- ============================================================ starter -->
+      <section id="starter" class="section">
+        <div class="wrap">
+          <h2>Start a project in one command</h2>
+          <p class="section-lead"><a href="https://www.npmjs.com/package/create-pixiformui" rel="noopener noreferrer"><code>create-pixiformui</code></a> scaffolds a working app: a demo sign-up form and a secure server that already checks everything PixiFormUI sends.</p>
+          <div class="starter">
+            <div class="starter-cmd">
+              <pre><code>npm create pixiformui@latest my-app
+cd my-app &amp;&amp; npm install &amp;&amp; npm run dev</code></pre>
+              <p class="muted">Pick a template with <code>-- --template vanilla</code>, <code>react</code> or <code>next</code>. Node.js 20+, no other tools.</p>
+              <div class="cta">
+                <a class="btn primary" href="https://www.npmjs.com/package/create-pixiformui" rel="noopener noreferrer">create-pixiformui on npm</a>
+                <a class="btn" href="https://github.com/rmsuthar/pixiformui/tree/main/packages/create-pixiformui" rel="noopener noreferrer">Templates on GitHub</a>
+              </div>
+            </div>
+            <ul class="starter-list">
+              <li><b>Demo form</b>conditional fields and a conditional group, a hidden field, encrypted passwords and the slide-to-the-mark check</li>
+              <li><b>Secure server</b>sessions and CSRF, invisible proof-of-work, rate limits and duplicate protection, with no dependencies</li>
+              <li><b>Shared rules</b>one fields file used by the browser and the server, including <code>showIf</code></li>
+              <li><b>Production-ready</b>a strict Content-Security-Policy, HTTPS headers and a checklist in the README</li>
+            </ul>
+          </div>
+          <div class="grid starter-templates">
+            <article class="card">
+              <span class="ico" aria-hidden="true">⚡</span>
+              <h3>vanilla</h3>
+              <p>TypeScript and Vite, no framework. The smallest setup: one page, one form, one server.</p>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">⚛️</span>
+              <h3>react</h3>
+              <p>React 19 with the <code>PixiForm</code> component, TypeScript and Vite, plus the same secure server.</p>
+            </article>
+            <article class="card">
+              <span class="ico" aria-hidden="true">▲</span>
+              <h3>next</h3>
+              <p>Next.js App Router with server-side rendering: the form's placeholder renders on the server, with route handlers for the API.</p>
+            </article>
+          </div>
+          <p class="muted starter-cloud">Rather not run a server? Point the form at <a href="https://cloud.pixiformui.lets.gen.in/">PixiForm Cloud</a> instead: free plan, no card.</p>
+        </div>
+      </section>
+
       <!-- ============================================================ faq -->
       <section id="faq" class="section">
         <div class="wrap faq">
@@ -303,6 +346,10 @@ export class SignupComponent {
             <details>
               <summary>What is PixiFormUI?</summary>
               <p>PixiFormUI is a JavaScript and TypeScript form library that draws every field on an HTML canvas. Typed values live in wipeable memory instead of the page DOM, so browser extensions, session-replay tools and injected scripts can't read them.</p>
+            </details>
+            <details>
+              <summary>How do I start a new project?</summary>
+              <p>Run <code>npm create pixiformui@latest my-app</code>. It scaffolds a working app with a demo form and a secure server (templates: vanilla TypeScript, React, or Next.js with server-side rendering). To add a form to an existing site without running a server, use <a href="https://cloud.pixiformui.lets.gen.in/">PixiForm Cloud</a>.</p>
             </details>
             <details>
               <summary>How does it protect passwords?</summary>
@@ -333,7 +380,8 @@ export class SignupComponent {
           <h2>Build your first secure form</h2>
           <p class="section-lead">The guide covers setup, every control, theming, the server, encryption, accessibility, analytics and MCP.</p>
           <div class="cta center">
-            <a class="btn primary" href="/docs/guide/">Developer guide</a>
+            <a class="btn primary" href="#starter">Start a project</a>
+            <a class="btn" href="/docs/guide/">Developer guide</a>
             <a class="btn" href="/docs/encryption/">Encryption spec</a>
           </div>
         </div>

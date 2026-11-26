@@ -83,7 +83,7 @@ a stolen database alone then can't be brute-forced. Argon2id (where available) i
 | --- | --- | --- | --- |
 | Node.js 22 | `server/pfe.ts` | built-in `node:crypto` | ✅ |
 | Python 3.9+ | `server/decrypt/python/pfe.py` | `cryptography` | ✅ |
-| Go 1.24+ | `server/decrypt/go/pfe.go` | standard library | ✅ |
+| Go 1.26.11+ | `server/decrypt/go/pfe.go` | standard library | ✅ |
 | C# / .NET 8+ | `server/decrypt/csharp/Pfe.cs` | standard library | ✅ |
 | Ruby 3+ | `server/decrypt/ruby/pfe.rb` | `openssl` gem | ✅ |
 | PHP 8.1+ | `server/decrypt/php/pfe.php` | `ext-openssl` | ⚠️ not run yet (no PHP on the dev machine) |

@@ -23,3 +23,6 @@ test-results
 
 # Waitlist exports (personal data)
 waitlist-*.csv
+
+# Go decryptor build output
+server/decrypt/go/pfe

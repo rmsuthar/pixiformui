@@ -44,5 +44,8 @@
   "bugs": {
     "url": "https://github.com/rmsuthar/pixiformui/issues",
     "email": "ravindra.suthar@me.com"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

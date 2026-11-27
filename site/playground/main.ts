@@ -261,6 +261,45 @@ function load(cfg: Record<string, unknown>): void {
   void rebuild();
 }
 
+// ------------------------------------------------------------------ describe a form (Claude designs the config)
+const aiPrompt = $<HTMLTextAreaElement>('#ai-prompt');
+const aiStatus = $('#ai-status');
+const aiButtons = [$<HTMLButtonElement>('#ai-create'), $<HTMLButtonElement>('#ai-change')];
+async function describe(change: boolean): Promise<void> {
+  const prompt = aiPrompt.value.trim();
+  if (prompt.length < 3) {
+    aiStatus.textContent = 'Describe the form first, e.g. “a contact form with name, email and message”.';
+    aiPrompt.focus();
+    return;
+  }
+  aiButtons.forEach((b) => (b.disabled = true));
+  aiStatus.textContent = change ? 'Changing your form…' : 'Designing your form… (about 10 seconds)';
+  try {
+    const res = await fetch('/api/generate-form', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, ...(change ? { current } : {}) }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; config?: Record<string, unknown> };
+    if (!res.ok || !data.config) {
+      aiStatus.textContent = data.message ?? `Couldn’t generate the form (${res.status}). Please try again.`;
+      return;
+    }
+    presetSelect.value = 'custom';
+    load({ ...data.config, theme: current.theme ?? 'indigo' });
+    aiStatus.textContent = '✓ Done. Try it in the preview, edit the JSON, or describe a change and press “Change current form”.';
+  } catch {
+    aiStatus.textContent = 'Couldn’t reach the server. Check your connection and try again.';
+  } finally {
+    aiButtons.forEach((b) => (b.disabled = false));
+  }
+}
+aiButtons[0].addEventListener('click', () => void describe(false));
+aiButtons[1].addEventListener('click', () => void describe(true));
+aiPrompt.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void describe(false);
+});
+
 presetSelect.addEventListener('change', () => {
   const p = PRESETS[presetSelect.value];
   if (p) load(structuredClone(p.config));

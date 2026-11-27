@@ -1323,3 +1323,51 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+/* ------------------------------------------------------------------ playground: describe a form */
+.pg-ai {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.pg-ai label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.pg-ai-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+#ai-prompt {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 var(--font);
+}
+#ai-prompt:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+.pg-ai-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pg-ai-status {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+@media (max-width: 720px) {
+  .pg-ai-row { flex-direction: column; }
+  .pg-ai-actions { flex-direction: row; flex-wrap: wrap; }
+}

@@ -53,7 +53,7 @@
       <div class="pg-head">
         <div>
           <h1>Playground</h1>
-          <p class="section-lead">Edit the config (JSON) and the form updates live. Nothing you type is sent anywhere.</p>
+          <p class="section-lead">Describe a form in plain words, or edit the config (JSON): the form updates live. What you type into the form itself never leaves this page.</p>
         </div>
         <div class="pg-actions">
           <label class="pg-preset">
@@ -64,6 +64,18 @@
           <button type="button" class="btn primary" id="share">Copy share link</button>
         </div>
       </div>
+
+      <section class="pg-ai" aria-labelledby="ai-label">
+        <label id="ai-label" for="ai-prompt">Describe a form</label>
+        <div class="pg-ai-row">
+          <textarea id="ai-prompt" rows="2" maxlength="600" aria-describedby="ai-status" placeholder="e.g. Job application: name, email, mobile, CV link, notice period (dropdown), expected salary and a short cover note"></textarea>
+          <div class="pg-ai-actions">
+            <button type="button" class="btn primary" id="ai-create">Create form</button>
+            <button type="button" class="btn" id="ai-change">Change current form</button>
+          </div>
+        </div>
+        <p class="pg-ai-status" id="ai-status" role="status" aria-live="polite">Your description is sent to our server and to Anthropic’s Claude API to design the form, then the JSON appears below for you to edit. Form values are never sent.</p>
+      </section>
 
       <div class="pg-grid">
         <section class="pg-editor" aria-labelledby="editor-label">

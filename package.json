@@ -26,6 +26,7 @@
     "snyk:report": "snyk monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform && snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "1.5.0",
     "@playwright/test": "1.65.1",
     "@types/node": "^22.20.5",
     "esbuild": "0.28.2",

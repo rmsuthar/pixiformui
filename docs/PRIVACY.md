@@ -29,6 +29,13 @@ your browser.
 **Demo and playground.** Forms you fill in on the home page demo and in the playground stay in your browser.
 Password fields are encrypted with a key generated in your browser, and nothing is sent to us.
 
+**Describe a form (playground).** If you use the "Describe a form" box, the description you type (and, when you ask
+for a change, the form's current configuration) is sent to our server and to Anthropic's Claude API, which designs
+the form. We don't store the description; Anthropic processes it under its commercial terms and may keep it for a
+limited time for abuse monitoring, but doesn't use it to train models. What you type into the generated form itself
+is never sent. To stop overuse, a one-way hash of your IP address is kept with a counter for about two hours. Don't
+put personal or confidential information in the description.
+
 **Downloads.** The library is also available from npm, GitHub and jsDelivr. When you download from them, their own
 privacy policies apply.
 
@@ -88,6 +95,7 @@ We use these providers to run the services. Each processes personal data only to
 | --- | --- | --- |
 | Cloudflare, Inc. | Hosting, databases, storage, security | All of the data above, in Cloudflare's global network |
 | Resend (Plus Five Five, Inc.) | Sending email | Your email address and the email content |
+| Anthropic, PBC | Designing forms from a description (playground) | The description you type and the form's configuration |
 | Stripe, Inc. (when paid plans open) | Payments and invoices | Billing name, email, payment details (held by Stripe) |
 
 These providers may process data in countries other than yours, including the United States, under their own

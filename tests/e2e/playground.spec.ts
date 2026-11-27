@@ -42,3 +42,39 @@ test('share links reopen the same config', async ({ page, context, browserName }
   await other.goto(shared);
   await expect(other.locator('#preview .pixiform-a11y')).toHaveAttribute('aria-label', 'Shared form');
 });
+
+test('describe a form: the generated config fills the editor and the preview; changes send the current form', async ({ page }) => {
+  const sent: { prompt: string; current?: { title?: string } }[] = [];
+  await page.route('**/api/generate-form', async (route) => {
+    const body = route.request().postDataJSON() as { prompt: string; current?: { title?: string } };
+    sent.push(body);
+    if (body.prompt === 'boom') return route.fulfill({ status: 429, json: { ok: false, message: 'You’ve generated a lot of forms this hour.' } });
+    const title = body.current ? 'Job application (changed)' : 'Job application';
+    await route.fulfill({ json: { ok: true, config: { title, submitText: 'Apply', fields: [{ type: 'text', name: 'fullName', label: 'Full name', required: true }, { type: 'email', name: 'email', label: 'Email' }] } } });
+  });
+  await page.goto(URL);
+  const outline = page.locator('#preview .pixiform-a11y');
+  await expect(outline).toHaveAttribute('aria-label', 'Create your account');
+  await expect(page.locator('#ai-status')).toContainText('Form values are never sent');
+
+  await page.getByRole('button', { name: 'Create form' }).click();
+  await expect(page.locator('#ai-status')).toContainText('Describe the form first');
+  expect(sent).toHaveLength(0);
+
+  await page.fill('#ai-prompt', 'job application with name and email');
+  await page.getByRole('button', { name: 'Create form' }).click();
+  await expect(outline).toHaveAttribute('aria-label', 'Job application');
+  await expect(page.locator('#editor')).toHaveValue(/"title": "Job application"/);
+  await expect(page.locator('#ai-status')).toContainText('Done');
+  expect(sent[0]).toEqual({ prompt: 'job application with name and email' }); // a new form sends no current config
+
+  await page.fill('#ai-prompt', 'make email required');
+  await page.getByRole('button', { name: 'Change current form' }).click();
+  await expect(outline).toHaveAttribute('aria-label', 'Job application (changed)');
+  expect(sent[1].current?.title).toBe('Job application');
+
+  await page.fill('#ai-prompt', 'boom');
+  await page.getByRole('button', { name: 'Create form' }).click();
+  await expect(page.locator('#ai-status')).toContainText('a lot of forms this hour');
+  await expect(outline).toHaveAttribute('aria-label', 'Job application (changed)'); // the form stays
+});

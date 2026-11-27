@@ -4,6 +4,7 @@
  *
  *   GET  /api/waitlist/session  → { pow: { challenge, difficulty } }   (no cookies, no state)
  *   POST /api/waitlist          → { ok, message?, fieldErrors? }        (the Pro & Cloud waitlist)
+ *   POST /api/generate-form     → { ok, config }                        (describe a form: site/form-builder.ts)
  *
  * Abuse protection without sessions: the proof-of-work challenge is signed (HMAC) and carries its
  * issue time, so the Worker can check it, enforce a minimum fill time, and refuse reuse (KV, TTL).
@@ -12,6 +13,7 @@
  */
 import { checkPow, parsePowToken } from '../shared/pow.ts';
 import { confirmationEmail, ownerEmail, sendMail } from './waitlist-email.ts';
+import { generateForm, type BuilderEnv } from './form-builder.ts';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -21,7 +23,7 @@ interface Ctx {
   waitUntil(p: Promise<unknown>): void;
 }
 
-export interface Env {
+export interface Env extends BuilderEnv {
   ASSETS: { fetch(req: Request): Promise<Response> };
   WAITLIST: KVNamespace;
   WAITLIST_SECRET: string;
@@ -213,6 +215,7 @@ export default {
     try {
       if (path === '/api/waitlist/session') return await session(env);
       if (path === '/api/waitlist') return await join(req, env, ctx);
+      if (path === '/api/generate-form') return await generateForm(req, env);
       if (path.startsWith('/api/')) return json(404, { message: 'Not found.' });
     } catch (err) {
       console.error('waitlist error', err);

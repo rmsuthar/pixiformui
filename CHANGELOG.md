@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Describe a form (playground):** type what you need ("job application with CV link and notice period") and
+  Claude designs the config; follow-ups change the current form. The website Worker constrains the reply to a JSON
+  schema and rebuilds it from an allowlist, with per-visitor and daily limits. Off until `ANTHROPIC_API_KEY` is set.
 - **Pop-out:** `popout: true` adds a button at the form's top-right corner that opens the same form in a larger
   dialog over the page and puts it back (the button, Escape, or a click outside). Values, errors, focus and secrets
   are kept and nothing is rebuilt; the page behind is inert while it's open. `handle.popOut()`, `popIn()` and

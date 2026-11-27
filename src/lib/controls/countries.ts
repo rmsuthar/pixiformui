@@ -71,5 +71,8 @@ export function formatNational(digits: string, pattern: string): string {
     else out += ch;
   }
   if (i < digits.length) out += (out ? ' ' : '') + digits.slice(i);
-  return out.replace(/[\s\-–(]+$/, '');
+  // Drop trailing separators (a loop, not a regex: linear on any input).
+  let end = out.length;
+  while (end > 0 && /[\s\-–(]/.test(out[end - 1])) end--;
+  return out.slice(0, end);
 }

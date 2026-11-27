@@ -50,9 +50,14 @@ export function loadKeyRing(opts: { currentFile: string; retiredFiles?: string[]
     if (!opts.allowGenerate) throw new PfeError(`Missing PFE private key: ${opts.currentFile}`);
     const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
     mkdirSync(dirname(opts.currentFile), { recursive: true, mode: 0o700 });
-    writeFileSync(opts.currentFile, privateKey.export({ format: 'pem', type: 'pkcs8' }), { mode: 0o600 });
-    chmodSync(opts.currentFile, 0o600);
-    console.log(`[pfe] generated new key ${opts.currentFile}`);
+    try {
+      // 'wx': never overwrite a key another process created in the meantime.
+      writeFileSync(opts.currentFile, privateKey.export({ format: 'pem', type: 'pkcs8' }), { mode: 0o600, flag: 'wx' });
+      chmodSync(opts.currentFile, 0o600);
+      console.log(`[pfe] generated new key ${opts.currentFile}`);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+    }
   }
   const current = loadKey(readFileSync(opts.currentFile, 'utf8'));
   const byKid = new Map([[current.kid, current]]);

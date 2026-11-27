@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.9
+
+Security hardening from a Snyk Code and CodeQL review. No API changes.
+
+- **Starter (`create-pixiformui`):** the generated server only serves files inside `dist/` (sibling folders such as
+  `dist-old/` are refused) and answers malformed or null-byte paths with 400 instead of an error.
+- **Phone input:** trailing separators are trimmed with a linear loop instead of a regex, so very long pasted input
+  can't slow formatting down.
+- **Reference server:** keys and secrets in `.keys/` are created atomically (two processes starting at once can't
+  overwrite each other's key); request URLs are escaped in the log; passkeys work again on `EXTRA_ALLOWED_HOSTS`
+  (device testing) and `[::1]`; idempotency keys are scoped per endpoint; static files aren't rate-limited (behind a
+  proxy every visitor shares one IP).
+- **Supply chain:** Snyk runs in CI (pinned version, read-only job), not in the npm publish job.
+
 ## 0.1.8
 
 - **PixiForm Cloud** is promoted where developers look: a section near the top of the npm README ("No server? Use

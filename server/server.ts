@@ -55,15 +55,25 @@ const pfe = loadKeyRing({
 });
 if (PROD && !process.env.PFE_KEY_FILE) console.warn('[pfe] using a local generated key; set PFE_KEY_FILE in production');
 
+/**
+ * Creates a secret file only if it doesn't exist yet. 'wx' fails instead of overwriting, so two
+ * processes starting at once can't replace each other's key; the loser reads the winner's file.
+ */
+function createSecretFile(f: string, content: string): void {
+  mkdirSync(KEY_DIR, { recursive: true, mode: 0o700 });
+  try {
+    writeFileSync(f, content, { mode: 0o600, flag: 'wx' });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+  }
+}
+
 /** Server-side pepper: an HMAC key mixed into every password before hashing. */
 const PEPPER = loadPepper();
 function loadPepper(): Buffer {
   if (process.env.PASSWORD_PEPPER) return Buffer.from(process.env.PASSWORD_PEPPER, 'base64');
   const f = join(KEY_DIR, 'pepper');
-  if (!existsSync(f)) {
-    mkdirSync(KEY_DIR, { recursive: true, mode: 0o700 });
-    writeFileSync(f, randomBytes(32).toString('base64'), { mode: 0o600 });
-  }
+  if (!existsSync(f)) createSecretFile(f, randomBytes(32).toString('base64'));
   return Buffer.from(readFileSync(f, 'utf8').trim(), 'base64');
 }
 
@@ -75,10 +85,7 @@ const AGENT_TOKEN = loadAgentToken();
 function loadAgentToken(): string {
   if (process.env.AGENT_API_TOKEN) return process.env.AGENT_API_TOKEN;
   const f = join(KEY_DIR, 'agent-token');
-  if (!existsSync(f)) {
-    mkdirSync(KEY_DIR, { recursive: true, mode: 0o700 });
-    writeFileSync(f, randomBytes(32).toString('base64url'), { mode: 0o600 });
-  }
+  if (!existsSync(f)) createSecretFile(f, randomBytes(32).toString('base64url'));
   return readFileSync(f, 'utf8').trim();
 }
 
@@ -883,7 +890,7 @@ const server = createServer(async (req, res) => {
   const started = Date.now();
   securityHeaders(res);
   res.on('finish', () => {
-    if (req.url?.startsWith('/api/')) console.log(`${req.method} ${req.url} ${res.statusCode} ${Date.now() - started}ms`);
+    if (req.url?.startsWith('/api/')) console.log(`${req.method} ${req.url.replace(/[^\x20-\x7e]/g, '?')} ${res.statusCode} ${Date.now() - started}ms`);
   });
   try {
     if (!ALLOWED_HOSTS.has((req.headers.host ?? '').toLowerCase())) return json(res, 421, { message: 'Unknown host.' });

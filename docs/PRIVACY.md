@@ -1,6 +1,6 @@
 # Privacy policy
 
-**Last updated: 26 November 2026**
+**Last updated: 27 November 2026**
 
 This policy explains what personal data we collect when you use the PixiFormUI website
 (pixiformui.lets.gen.in), join the Pro & Cloud waitlist, or use PixiForm Cloud (cloud.pixiformui.lets.gen.in), why we
@@ -16,7 +16,8 @@ PixiFormUI and PixiForm Cloud are run by **Ravindrakumar Suthar** ("we", "us"). 
 - In PixiForm Cloud, **form submissions are end-to-end encrypted**: they're encrypted to a key that only the form
   owner holds, so we can't read them.
 - We don't sell personal data, and we don't use it for advertising.
-- You can ask us to see, correct or delete your data at any time.
+- You can delete your PixiForm Cloud account yourself at any time (Account → Delete account), or ask us to see,
+  correct or delete your data.
 
 ## 1. The website
 
@@ -105,8 +106,11 @@ you can ask to access, correct or delete your personal data, to receive a copy, 
 it, and to withdraw consent at any time. Write to [ravindra.suthar@me.com](mailto:ravindra.suthar@me.com) and we'll
 answer within 30 days. You can also complain to your local data protection authority.
 
-To delete your PixiForm Cloud account, email us from the address you sign in with. We delete your account, forms,
-submissions, webhooks and keys. Copies in our providers' backups expire within 30 days.
+To delete your PixiForm Cloud account, open **Account → Delete account** in the dashboard and type your email address
+to confirm. This immediately deletes your account, forms, submissions, webhooks and their delivery history, API keys,
+sessions and usage records, and we email you a confirmation. If you have a paid subscription, cancel it in Billing
+first. You can also ask us by email from the address you sign in with. Copies in our providers' backups expire within
+30 days. Your private key was never sent to us; delete the backup file yourself if you no longer need it.
 
 ## 7. Children
 

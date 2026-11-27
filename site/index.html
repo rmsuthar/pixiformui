@@ -178,6 +178,7 @@
                 <button role="tab" id="tab-form" aria-controls="panel-form" aria-selected="false" tabindex="-1">Events</button>
                 <button role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false" tabindex="-1">Analytics</button>
                 <button role="tab" id="tab-dom" aria-controls="panel-dom" aria-selected="false" tabindex="-1">Page DOM</button>
+                <button role="tab" id="tab-source" aria-controls="panel-source" aria-selected="false" tabindex="-1">Source</button>
               </div>
               <div class="panel" role="tabpanel" id="panel-payload" aria-labelledby="tab-payload">
                 <p class="muted">Submit the form to see the JSON body. The password becomes a <code>pfe1.…</code> envelope only your server's private key can open.</p>
@@ -194,6 +195,10 @@
               <div class="panel" role="tabpanel" id="panel-dom" aria-labelledby="tab-dom" hidden>
                 <p class="muted">Checked live against this page's HTML and every input's value:</p>
                 <dl class="facts" id="dom-facts"></dl>
+              </div>
+              <div class="panel" role="tabpanel" id="panel-source" aria-labelledby="tab-source" hidden>
+                <p class="muted">The complete code of this form, read-only: fields, validators, the submit rule and the encrypted submit. This page runs exactly this file.</p>
+                <pre id="demo-source" class="source" tabindex="0" aria-label="Source code of the demo form"><code>// loading…</code></pre>
               </div>
             </aside>
           </div>

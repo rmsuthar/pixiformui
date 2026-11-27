@@ -10,12 +10,13 @@ import {
   type AccentName,
   type AnalyticsEvent,
   type EncryptionKey,
-  type FieldConfig,
   type PixiFormEventMap,
   type PixiFormEventType,
   type PixiFormHandle,
   type PixiFormListeners,
 } from '../src/lib';
+import { mountDemoForm } from './demo-form';
+import demoSource from './demo-form.ts?raw';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const mq = matchMedia('(prefers-color-scheme: dark)');
@@ -76,55 +77,6 @@ function pageContains(text: string): boolean {
 }
 
 // ------------------------------------------------------------------ demo
-const demoFields: FieldConfig[] = [
-  {
-    type: 'group',
-    title: 'Account',
-    description: 'How you sign in.',
-    fields: [
-      { type: 'text', name: 'fullName', label: 'Full name', placeholder: 'Ada Lovelace', required: true, maxLength: 80, row: 'n' },
-      { type: 'text', name: 'username', label: 'Username', placeholder: 'ada_l', required: true, maxLength: 24, row: 'n', info: 'Lowercase letters, digits and _.' },
-      { type: 'email', name: 'email', label: 'Email', placeholder: 'you@example.com', required: true },
-      { type: 'password', name: 'password', label: 'Password', placeholder: 'At least 12 characters', required: true, strengthMeter: true, info: 'Encrypted in your browser before it would be sent.' },
-    ],
-  },
-  {
-    type: 'group',
-    title: 'About you',
-    fields: [
-      { type: 'phone', name: 'phone', label: 'Mobile', defaultCountry: 'IN', preferredCountries: ['IN', 'US', 'GB', 'AE', 'SG'], row: 'p' },
-      { type: 'date', name: 'dateOfBirth', label: 'Date of birth', max: 'today', placeholder: 'Pick a date', row: 'p' },
-    ],
-  },
-  {
-    type: 'group',
-    name: 'preferences',
-    title: 'Preferences',
-    description: 'Optional. Folded to show collapsible groups.',
-    collapsible: true,
-    collapsed: true,
-    fields: [
-      {
-        type: 'radio',
-        name: 'plan',
-        label: 'Plan',
-        value: 'free',
-        direction: 'horizontal',
-        options: [
-          { value: 'free', label: 'Free' },
-          { value: 'pro', label: 'Pro' },
-          { value: 'team', label: 'Team' },
-        ],
-      },
-      { type: 'slider', name: 'experience', label: 'Years of experience', min: 0, max: 40, value: 3 },
-      { type: 'switch', name: 'newsletter', label: 'Product updates' },
-    ],
-  },
-  { type: 'checkbox', name: 'terms', label: 'I accept the terms (demo)', required: true, requiredMessage: 'Please accept the terms.' },
-  // Slide-to-the-mark human check: the mark is random and drawn only on the canvas; not sent with the form.
-  { type: 'humancheck', name: 'human', label: 'Quick check', info: 'Drag the handle onto the mark. Keyboard: arrow keys, then Enter.' },
-];
-
 async function demo(): Promise<void> {
   const key = await demoKey();
   const events = $('#events');
@@ -132,32 +84,22 @@ async function demo(): Promise<void> {
   let accent: AccentName = 'indigo';
   let mode: 'light' | 'dark' | 'auto' = 'auto';
 
-  handle = await mountPixiForm($('#demo-form'), {
-    id: 'demo-signup',
-    load: 'visible', // built when scrolled near; the host shows a placeholder until then
-    on: formEventLog($('#form-events')),
-    title: 'Create your account',
-    subtitle: 'Rendered on canvas. Nothing leaves this page.',
+  handle = await mountDemoForm($('#demo-form'), {
+    encryptionKey: key,
     theme: accent,
     mode,
-    maxWidth: 640,
-    privacyScreen: true,
-    fields: demoFields,
-    submitText: 'Create account',
-    resetText: 'Reset',
-    analytics: {
-      formId: 'demo-signup',
-      onEvent: (e) => logEvent(events, e),
-    },
-    onSubmit: async (_values, form) => {
-      const body = await form.serialize({ encryptionKey: key });
+    on: formEventLog($('#form-events')),
+    onAnalytics: (e) => logEvent(events, e),
+    onPayload: (body) => {
       // Each envelope is bound to a single-use challenge, like on a real server.
       key.challenge = b64uEncode(crypto.getRandomValues(new Uint8Array(16)));
       showPayload(body);
       selectTab('tab-payload');
-      return { ok: true, message: 'Demo: nothing was sent. See what your server would receive.' };
     },
   });
+
+  // ---- Source tab: the file above, exactly as it runs (read-only)
+  $('#demo-source').textContent = demoSource.replace("from '../src/lib'", "from 'pixiformui'");
 
   // ---- appearance toolbar
   const swatches = $('#swatches');

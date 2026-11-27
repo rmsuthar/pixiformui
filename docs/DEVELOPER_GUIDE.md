@@ -767,6 +767,63 @@ Call `control.validate()` yourself to re-check a dependent field, e.g. revalidat
 `fromRule(rules, name)` returns options including a validator built from the rule, so the browser runs the same
 checks as the server. See [§13](#13-shared-rules).
 
+### 7.4 Business rules and custom error messages
+
+There are three places for a check. Pick by what the check needs to know:
+
+| The check needs… | Put it in | Message appears |
+| --- | --- | --- |
+| Only this field's value (format, length, "no spaces") | `validators` on the field | Under the field, when it's left and on submit |
+| Another field too (end date after start date, matching passwords) | a validator using `ctx.getField(name)` | Under the field |
+| The whole form, your server or a database (reserved or taken names, stock, limits) | `onSubmit`, returning `fieldErrors` | Under each named field; the first gets focus |
+
+On submit, every field's validators run first. `onSubmit` is only called once they all pass, so it never sees a
+value that breaks a field rule.
+
+**Several checks on one field.** List them in order. They stop at the first failure, so put the most helpful
+message first:
+
+```ts
+{
+  type: 'text', name: 'username', label: 'Username', required: true, maxLength: 24,
+  validators: [
+    (v) => (/\s/.test(v) ? 'Usernames can’t contain spaces. Try ada_l instead of ada l.' : null),
+    (v) => (v.length >= 3 ? null : 'Use at least 3 characters.'),
+    (v) => (/^[a-z]/.test(v) ? null : 'Start with a lowercase letter.'),
+    (v) => (/^[a-z0-9_]+$/.test(v) ? null : 'Use only lowercase letters, digits and _.'),
+    async (v) => ((await api.isTaken(v)) ? 'That username is taken.' : null), // async works too
+  ],
+}
+```
+
+**Business rules on submit.** Return `ok: false` with `fieldErrors` keyed by field name. Nothing is sent, and each
+message appears on its field:
+
+```ts
+const RESERVED = new Set(['admin', 'root', 'support']);
+
+mountPixiForm(host, {
+  fields,
+  onSubmit: async (values) => {
+    const errors: Record<string, string> = {};
+    if (RESERVED.has(String(values.username))) errors.username = 'That username is reserved. Please choose another.';
+    if (values.plan === 'team' && Number(values.seats) < 2) errors.seats = 'Team plans need at least 2 seats.';
+    if (Object.keys(errors).length) return { ok: false, message: 'Please fix the highlighted fields.', fieldErrors: errors };
+
+    // Your server has the final say: pass its field errors straight through.
+    const res = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
+    const data = await res.json();
+    return res.ok ? { ok: true, message: 'Account created.' } : { ok: false, message: data.message, fieldErrors: data.fieldErrors };
+  },
+});
+```
+
+The live demo on the home page does both: type `ada l` in Username for a field check, or `admin` for the submit
+rule.
+
+**Always repeat the rules on the server.** Browser checks give fast feedback, but anyone can skip them. Keep the
+rules in one shared file ([§13](#13-shared-rules)) so the browser and the server can't drift apart.
+
 ---
 
 ## 8. Input formatting and sanitisation

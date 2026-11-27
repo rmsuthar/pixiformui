@@ -1,6 +1,6 @@
 # Terms of service
 
-**Last updated: 26 November 2026**
+**Last updated: 27 November 2026**
 
 These terms cover your use of PixiForm Cloud (cloud.pixiformui.lets.gen.in) and the PixiFormUI website
 (pixiformui.lets.gen.in). PixiFormUI and PixiForm Cloud are run by **Ravindrakumar Suthar** ("we", "us"). By creating
@@ -75,7 +75,8 @@ of these terms.
 
 ## 9. Ending
 
-You can stop using the services and delete your account at any time. We may suspend or end your access if you
+You can stop using the services and delete your account at any time, from Account → Delete account in the dashboard.
+Deleting it removes your forms and submissions immediately and can't be undone; cancel any paid subscription first. We may suspend or end your access if you
 seriously or repeatedly break these terms, or if the law requires it. Sections 4 and 6 to 10 continue to apply after
 your access ends.
 

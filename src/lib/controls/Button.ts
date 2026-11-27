@@ -103,6 +103,8 @@ export class Button extends Control<null> {
     return false;
   }
 
+  override readonly isAction = true;
+
   override ariaRole(): string {
     return 'button';
   }

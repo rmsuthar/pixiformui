@@ -189,7 +189,7 @@ export class FormAnalytics {
   }
 
   private watchField(c: Control<unknown>): void {
-    if (this.fields.has(c) || c.ariaRole() === 'button') return;
+    if (this.fields.has(c) || c.isAction) return;
     const st: FieldState = { focusedAt: 0, changes: 0, completed: false, lastErrorCode: null };
     this.fields.set(c, st);
     const excluded = this.opts.excludeFields?.includes(c.fieldName) ?? false;

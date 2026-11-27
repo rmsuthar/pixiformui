@@ -14,7 +14,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sealBytes, type EncryptionKey } from '../src/lib/security/envelope.ts';
-import { loadKey, openEnvelope } from '../server/pfe.ts';
+import { sealFile } from '../src/lib/file/crypto.ts';
+import { loadKey, openEnvelope, openFile } from '../server/pfe.ts';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dir = mkdtempSync(join(tmpdir(), 'pfe-'));
@@ -48,8 +49,19 @@ vectors.push({
 });
 vectors.push({ name: 'malformed', envelope: 'pfe1.not-valid', context: `${challenge}|password`, expect: null });
 
+// PFF1 (encrypted files): sealed as in the browser; decryptors that know files check these too.
+type FileVector = { name: string; key: string; blob: string; context: string; expect: string | null };
+const fileVectors: FileVector[] = [];
+const doc = enc.encode('%PDF-1.7 conformance ' + 'é'.repeat(300));
+const a = await sealFile(new File([doc], 'a.pdf', { type: 'application/pdf' }), ek, 'cv', 0);
+const b = await sealFile(new File(['other'], 'b.txt'), ek, 'cv', 1);
+const b64 = (u: Uint8Array) => Buffer.from(u).toString('base64url');
+fileVectors.push({ name: 'file-valid', key: a.key, blob: b64(a.blob), context: `${challenge}|cv[0]`, expect: hex(doc) });
+fileVectors.push({ name: 'file-swapped-blob', key: a.key, blob: b64(b.blob), context: `${challenge}|cv[0]`, expect: null });
+fileVectors.push({ name: 'file-wrong-slot', key: a.key, blob: b64(a.blob), context: `${challenge}|cv[1]`, expect: null });
+
 const file = join(dir, 'pfe1-vectors.json');
-writeFileSync(file, JSON.stringify({ spec: 'pfe1', privateKeyPem: pem, kid: key.kid, vectors }, null, 2));
+writeFileSync(file, JSON.stringify({ spec: 'pfe1', privateKeyPem: pem, kid: key.kid, vectors, files: fileVectors }, null, 2));
 
 // ---- Node (server/pfe.ts)
 let nodeOk = true;
@@ -57,6 +69,15 @@ for (const v of vectors) {
   let got: string | null = null;
   try {
     got = openEnvelope(v.envelope, new Map([[key.kid, key]]), v.context).toString('hex');
+  } catch {
+    got = null;
+  }
+  if (got !== v.expect) nodeOk = false;
+}
+for (const v of fileVectors) {
+  let got: string | null = null;
+  try {
+    got = openFile(v.key, Buffer.from(v.blob, 'base64url'), new Map([[key.kid, key]]), v.context).data.toString('hex');
   } catch {
     got = null;
   }

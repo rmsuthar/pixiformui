@@ -28,14 +28,19 @@ export function readCsrfToken(): string | null {
  * same-origin enforcement, HTTPS-only for allowed cross-origin targets,
  * CSRF header, no caching, no referrer, no redirects, and a timeout.
  */
-export async function secureSubmit(url: string, body: unknown, opts: SecureSubmitOptions = {}): Promise<Response> {
+function checkTarget(url: string, allowedOrigins?: string[]): { target: URL; sameOrigin: boolean } {
   const target = new URL(url, window.location.href);
   const sameOrigin = target.origin === window.location.origin;
   if (!sameOrigin) {
-    if (!opts.allowedOrigins?.includes(target.origin)) throw new Error(`Refusing to submit to untrusted origin ${target.origin}`);
+    if (!allowedOrigins?.includes(target.origin)) throw new Error(`Refusing to submit to untrusted origin ${target.origin}`);
     if (target.protocol !== 'https:') throw new Error('Cross-origin submissions require HTTPS');
   }
   if (target.username || target.password) throw new Error('Credentials in URLs are not allowed');
+  return { target, sameOrigin };
+}
+
+export async function secureSubmit(url: string, body: unknown, opts: SecureSubmitOptions = {}): Promise<Response> {
+  const { target, sameOrigin } = checkTarget(url, opts.allowedOrigins);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -71,6 +76,38 @@ export async function secureSubmit(url: string, body: unknown, opts: SecureSubmi
       referrerPolicy: 'strict-origin',
       signal: controller.signal,
     });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Uploads one encrypted file (bytes from pixiformui/file) with the same rules as secureSubmit:
+ * same origin (or an allowed HTTPS origin), CSRF header, no caching or redirects, a timeout.
+ * The server answers `{ id }`, which the form then submits with the file's sealed key.
+ */
+export async function secureUpload(url: string, bytes: Uint8Array, field: string, opts: SecureSubmitOptions = {}): Promise<string> {
+  const { target, sameOrigin } = checkTarget(url, opts.allowedOrigins);
+  const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-Upload-Field': field, ...opts.headers };
+  const token = opts.csrfToken === undefined ? readCsrfToken() : opts.csrfToken;
+  if (token) headers[opts.csrfHeader ?? 'X-CSRF-Token'] = token;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new DOMException('Upload timed out', 'TimeoutError')), opts.timeoutMs ?? 120_000);
+  try {
+    const res = await fetch(target.href, {
+      method: 'POST',
+      headers,
+      body: bytes as BufferSource,
+      credentials: sameOrigin ? 'same-origin' : 'omit',
+      mode: sameOrigin ? 'same-origin' : 'cors',
+      cache: 'no-store',
+      redirect: 'error',
+      referrerPolicy: 'strict-origin',
+      signal: controller.signal,
+    });
+    const reply = (await res.json().catch(() => ({}))) as { id?: unknown; message?: string };
+    if (!res.ok || typeof reply.id !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(reply.id)) throw new Error(reply.message ?? `Upload failed (${res.status})`);
+    return reply.id;
   } finally {
     clearTimeout(timer);
   }

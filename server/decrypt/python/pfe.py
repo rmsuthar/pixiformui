@@ -6,8 +6,15 @@
         hash_password(plaintext)
     finally:
         plaintext[:] = b"\\0" * len(plaintext)   # returned as a bytearray so it can be wiped
+
+    # Encrypted files (pixiformui/file): key = the submitted envelope, blob = the uploaded bytes
+    from pfe import open_file
+    manifest, data = open_file(key, blob, private_key_pem, f"{challenge}|{field}[{index}]")
 """
 import base64
+import hashlib
+import hmac
+import json
 import re
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -61,6 +68,32 @@ def open_envelope(envelope: str, private_key_pem: str, context: str, keys_by_kid
         raise PfeError("decryption failed") from e
 
 
+def open_file(key: str, blob: bytes, private_key_pem: str, context: str, keys_by_kid=None):
+    """Opens a PFF1 file: returns (manifest dict with name/type/size, decrypted bytes as a bytearray)."""
+    raw = open_envelope(key, private_key_pem, context, keys_by_kid)
+    try:
+        m = json.loads(bytes(raw).decode("utf-8"))
+    except ValueError as e:
+        raise PfeError("malformed file key") from e
+    finally:
+        raw[:] = b"\0" * len(raw)
+    if not isinstance(m, dict) or m.get("v") != 1 or not isinstance(m.get("k"), str) or not isinstance(m.get("sha256"), str):
+        raise PfeError("malformed file key")
+    if len(blob) < 4 + 12 + 16 or blob[:4] != b"PFF1":
+        raise PfeError("not a PFF1 file")
+    if not hmac.compare_digest(hashlib.sha256(blob).digest(), _b64u(m["sha256"])):
+        raise PfeError("file does not match its key")  # a different upload can't be swapped in
+    file_key = _b64u(m["k"])
+    if len(file_key) != 32:
+        raise PfeError("malformed file key")
+    try:
+        data = bytearray(AESGCM(file_key).decrypt(bytes(blob[4:16]), bytes(blob[16:]), b"pff1"))
+    except Exception as e:
+        raise PfeError("file decryption failed") from e
+    manifest = {"name": str(m.get("name", "file"))[:255], "type": str(m.get("type", "application/octet-stream"))[:255], "size": int(m.get("size") or len(data))}
+    return manifest, data
+
+
 if __name__ == "__main__":  # conformance test: python3 pfe.py vectors.json
     import json, sys
 
@@ -69,6 +102,14 @@ if __name__ == "__main__":  # conformance test: python3 pfe.py vectors.json
     for v in data["vectors"]:
         try:
             got = open_envelope(v["envelope"], data["privateKeyPem"], v["context"]).hex()
+        except PfeError:
+            got = None
+        if got != v["expect"]:
+            bad.append(v["name"])
+    for v in data.get("files", []):  # PFF1 vectors (optional)
+        try:
+            _, plain = open_file(v["key"], _b64u(v["blob"]), data["privateKeyPem"], v["context"])
+            got = plain.hex()
         except PfeError:
             got = None
         if got != v["expect"]:

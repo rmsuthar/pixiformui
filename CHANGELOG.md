@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Encrypted file uploads (`pixiformui/file`):** `fileField({ name, label, accept, maxSize, maxFiles })` adds a
+  canvas drop zone with file chips (picker, drag and drop, keyboard). Each file is encrypted in the browser with its
+  own key (PFF1: AES-256-GCM, key sealed in a PFE1 envelope with the file's name and type), uploaded to
+  `config.upload`, and submitted as `[{ id, key }]`. File names never enter the page. Decryptors: `openFile` (Node)
+  and `open_file` (Python), in the cross-language conformance test. A separate 5 KB import that shares the core.
+- `secureUpload()`, `serialize({ upload })`, a `custom` field type for add-ons, and `Control.isAction` (buttons are
+  recognised by a flag instead of their ARIA role).
 - **Describe a form (playground):** type what you need ("job application with CV link and notice period") and
   Claude designs the config; follow-ups change the current form. The website Worker constrains the reply to a JSON
   schema and rebuilds it from an allowlist, with per-visitor and daily limits. Off until `ANTHROPIC_API_KEY` is set.

@@ -42,6 +42,7 @@ reference server. This guide covers everything you need to build, style, extend,
 29. [Protecting forms from bots](#29-protecting-forms-from-bots)
 30. [Conditional and hidden fields](#30-conditional-and-hidden-fields)
 31. [Server-side rendering (Next.js, Remix, Astro…)](#31-server-side-rendering-nextjs-remix-astro)
+32. [Encrypted file uploads](#32-encrypted-file-uploads)
 
 ---
 
@@ -2720,3 +2721,82 @@ The server HTML then holds the placeholder; in the browser, the component mounts
 For a complete, working setup, run `npm create pixiformui@latest my-app -- --template next`. It includes route
 handlers for the session and sign-up endpoints, with CSRF, encrypted passwords, proof-of-work, idempotency and
 validation from the same field definitions as the browser.
+
+---
+
+## 32. Encrypted file uploads
+
+File fields live in a separate import, `pixiformui/file` (about 5 KB gzipped), so forms without files don't load
+them. Each file is **encrypted in the browser** with its own key before it is uploaded, so the upload (and every
+proxy, log and storage bucket on the way) only ever sees opaque bytes. The file's name and type are encrypted too.
+
+```ts
+import { mountPixiForm } from 'pixiformui';
+import { fileField } from 'pixiformui/file';
+
+mountPixiForm(host, {
+  title: 'Apply for the role',
+  action: '/api/apply',      // the form, as JSON
+  session: '/api/session',   // CSRF token + encryption key (as for passwords)
+  upload: '/api/upload',     // where each encrypted file is POSTed first
+  fields: [
+    { type: 'text', name: 'name', label: 'Full name', required: true },
+    fileField({ name: 'cv', label: 'CV', accept: ['.pdf', '.docx'], maxSize: 10 * 1024 * 1024, required: true }),
+    fileField({ name: 'samples', label: 'Work samples', accept: ['image/*', '.pdf'], maxFiles: 5, row: 'extra' }),
+  ],
+});
+```
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `accept` | any | Extensions (`'.pdf'`) and MIME types (`'image/*'`, `'application/pdf'`), as for `<input accept>`. |
+| `maxSize` | 10 MB | Largest file, in bytes. Enforce the same limit on the server. |
+| `maxFiles` | 1 | More than 1 lets people choose or drop several files. |
+| `acceptLabel` | from `accept` | What the drop zone says is accepted, e.g. `'PDF or Word'`. |
+| `required`, `label`, `info`, `helperText`, `validators`, `row`, `showIf` | | As for every field. |
+
+**What people see.** A drop zone drawn on the canvas ("Choose a file or drop it here", with the accepted types and
+size), and a chip for each attached file with its size and a remove button. Enter or Space opens the system file
+picker; Backspace or Delete removes the last file. Files that are too big, of the wrong type or over the limit are
+refused with a message on the field. Like every value, file names never go into the page: the accessibility outline
+says "2 files attached (1.4 MB)", and messages don't name files.
+
+**What your server receives.** For each file, first an upload: `POST /api/upload` with
+`Content-Type: application/octet-stream`, the CSRF header and `X-Upload-Field: cv`. Store the bytes and answer
+`{ "id": "<random id>" }`. Then the form, where the field's value is a list of references:
+
+```json
+{ "name": "Ada Lovelace", "cv": [{ "id": "u_8c1f…", "key": "pfe1.…" }] }
+```
+
+Open each file with the same private key as your passwords:
+
+```ts
+import { openFile } from './pfe'; // server/pfe.ts (Python: open_file in server/decrypt/python/pfe.py)
+
+for (const [i, ref] of body.cv.entries()) {
+  const blob = await uploads.read(ref.id); // the bytes you stored for that id
+  const { manifest, data } = openFile(ref.key, blob, keyRing, `${challenge}|cv[${i}]`);
+  // manifest: { name, type, size } (untrusted: sanitize the name). data: the original file.
+}
+```
+
+`openFile` refuses a file whose upload doesn't match its key (so ids can't be swapped), a key moved to another
+field, and anything tampered with. The format is in [ENCRYPTION.md](ENCRYPTION.md#files-pff1).
+
+**With your own `onSubmit`** pass an uploader to `serialize()`:
+
+```ts
+onSubmit: async (_values, form) => {
+  const body = await form.serialize({
+    encryptionKey: session.encryption,
+    upload: (bytes, { field }) => secureUpload('/api/upload', bytes, field), // resolves with the server's id
+  });
+  // …POST body as usual
+},
+```
+
+Files are always encrypted: `serialize()` refuses a form with files when there's no `encryptionKey` or no `upload`.
+Server support in the reference server and `create-pixiformui` is coming next, and PixiForm Cloud will store
+encrypted files for paid plans.
+

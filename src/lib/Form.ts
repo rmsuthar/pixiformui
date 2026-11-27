@@ -9,8 +9,22 @@ import { Secret } from './security/Secret';
 
 export type FormValues = Record<string, unknown>;
 
+/** An uploaded, encrypted file in serialized data: the upload's id and its sealed key (PFF1, docs/ENCRYPTION.md). */
+export interface FileReference {
+  id: string;
+  key: string;
+}
+
 /** JSON-safe form data, as produced by `form.serialize()`. */
-export type SerializedValues = Record<string, string | number | boolean | null>;
+export type SerializedValues = Record<string, string | number | boolean | null | FileReference[]>;
+
+/** Uploads one encrypted file and resolves with the server's id for it. */
+export type FileUploader = (encrypted: Uint8Array, info: { field: string; index: number }) => Promise<string>;
+
+/** A value that serializes itself asynchronously (e.g. files: encrypt, upload, return references). */
+export interface SerializableValue {
+  serializeWith(ctx: { field: string; encryptionKey?: EncryptionKey; upload?: FileUploader }): Promise<FileReference[]>;
+}
 
 export interface SerializeOptions {
   /**
@@ -25,6 +39,8 @@ export interface SerializeOptions {
   include?: string[];
   /** Leave these fields out. */
   exclude?: string[];
+  /** Uploads encrypted files (file fields from pixiformui/file); `action` forms use `config.upload`. */
+  upload?: FileUploader;
 }
 
 export interface SetValuesResult {
@@ -181,7 +197,7 @@ export class Form extends EventEmitter {
   values(): FormValues {
     const out: FormValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button' || !c.submits || c.excluded) continue;
+      if (c.isAction || !c.submits || c.excluded) continue;
       out[name] = c.getValue();
     }
     return out;
@@ -197,7 +213,7 @@ export class Form extends EventEmitter {
   async serialize(opts: SerializeOptions = {}): Promise<SerializedValues> {
     const out: SerializedValues = Object.create(null);
     for (const [name, c] of this.controls) {
-      if (c.ariaRole() === 'button' || !c.submits || c.excluded) continue;
+      if (c.isAction || !c.submits || c.excluded) continue;
       if (opts.include && !opts.include.includes(name)) continue;
       if (opts.exclude?.includes(name)) continue;
       const v = c.getValue();
@@ -206,6 +222,8 @@ export class Form extends EventEmitter {
         if (v.isEmpty) out[name] = '';
         else if (opts.encryptionKey) out[name] = await sealSecret(v, opts.encryptionKey, name);
         else throw new Error(`serialize: "${name}" is a secret field; pass encryptionKey (or secrets: 'omit')`);
+      } else if (v && typeof (v as SerializableValue).serializeWith === 'function') {
+        out[name] = await (v as SerializableValue).serializeWith({ field: name, encryptionKey: opts.encryptionKey, upload: opts.upload });
       } else if (v === undefined) out[name] = null;
       else if (v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v))) out[name] = v;
       else out[name] = String(v);
@@ -225,7 +243,7 @@ export class Form extends EventEmitter {
     for (const name of Object.keys(values)) {
       const c = this.controls.get(name);
       const v = values[name];
-      if (!c || c.ariaRole() === 'button' || !c.submits) {
+      if (!c || c.isAction || !c.submits) {
         result.skipped[name] = 'unknown field';
         continue;
       }
@@ -257,7 +275,7 @@ export class Form extends EventEmitter {
 
   async validate(): Promise<Record<string, string>> {
     const errors: Record<string, string> = {};
-    const list = [...this.controls.values()].filter((c) => c.ariaRole() !== 'button' && !c.excluded);
+    const list = [...this.controls.values()].filter((c) => !c.isAction && !c.excluded);
     const results = await Promise.all(list.map((c) => ((c.touched = true), c.validate())));
     results.forEach((r, i) => {
       if (r) errors[list[i].fieldName] = r;

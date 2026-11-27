@@ -50,7 +50,7 @@ import { Form, type FormOptions, type FormValues, type SubmitResult } from './Fo
 import { Column, Row, ScrollView, type Layoutable } from './layout';
 import type { Secret } from './security/Secret';
 import type { EncryptionKey } from './security/envelope';
-import { secureSubmit, type SecureSubmitOptions } from './security/secureSubmit';
+import { secureSubmit, secureUpload, type SecureSubmitOptions } from './security/secureSubmit';
 import { FormProof, type PowChallenge } from './security/proof';
 import { Formatters } from './security/formatters';
 import {
@@ -92,6 +92,8 @@ export type FieldConfig =
   | WithRow<{ type: 'date' } & DatePickerOptions>
   | WithRow<{ type: 'phone' } & PhoneInputOptions>
   | WithRow<{ type: 'heading' | 'paragraph'; text: string }>
+  /** A control from an add-on, e.g. fileField() from pixiformui/file. */
+  | WithRow<{ type: 'custom'; create: (ui: FormUI) => Control<any> }>
   | WithRow<GroupConfig>;
 
 /** A titled section of fields (a fieldset). Values still submit with flat field names. */
@@ -120,6 +122,11 @@ export interface PixiFormConfig {
    * Fetched before the first submit and again once after a 403 (expired session).
    */
   session?: string;
+  /**
+   * Where `action` forms upload encrypted files (file fields from pixiformui/file) before
+   * submitting. The server answers each POST with `{ id }`.
+   */
+  upload?: string;
   /** Static alternatives to `session`. */
   csrfToken?: string;
   encryptionKey?: EncryptionKey;
@@ -463,6 +470,9 @@ async function mountInner(
           break;
         case 'phone':
           c = new PhoneInput(ui, opts as unknown as PhoneInputOptions);
+          break;
+        case 'custom':
+          c = (opts as unknown as { create: (ui: FormUI) => Control<any> }).create(ui);
           break;
         default:
           throw new Error(`mountPixiForm: unknown field type "${String(type)}"`);
@@ -879,7 +889,7 @@ interface SessionInfo {
 
 /** Builds an onSubmit that serializes, encrypts secrets and POSTs to `config.action`. */
 export function actionSubmitter(
-  config: Pick<PixiFormConfig, 'action' | 'session' | 'csrfToken' | 'encryptionKey' | 'submitOptions' | 'captcha'>,
+  config: Pick<PixiFormConfig, 'action' | 'session' | 'csrfToken' | 'encryptionKey' | 'submitOptions' | 'captcha' | 'upload'>,
 ): FormOptions['onSubmit'] & { prefetch: () => void } {
   const action = config.action!;
   let session: SessionInfo | null = null;
@@ -897,7 +907,12 @@ export function actionSubmitter(
       if (config.session && !session) await (loading ?? loadSession()).catch(() => loadSession());
       const send = async () => {
         const key = session?.encryption ?? config.encryptionKey;
-        const body = await form.serialize({ encryptionKey: key });
+        const csrfToken = session?.csrfToken ?? config.csrfToken;
+        const upload = config.upload;
+        const body = await form.serialize({
+          encryptionKey: key,
+          upload: upload ? (bytes, info) => secureUpload(upload, bytes, info.field, { ...(config.submitOptions ?? {}), csrfToken }) : undefined,
+        });
         return secureSubmit(action, body, {
           ...(config.submitOptions ?? {}),
           csrfToken: session?.csrfToken ?? config.csrfToken,

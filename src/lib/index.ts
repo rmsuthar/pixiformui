@@ -14,7 +14,7 @@ export { HiddenField, type HiddenFieldOptions, type HiddenValue } from './contro
 export { evaluateCondition, conditionFields, type Condition, type FieldCondition, type ShowIf, type ConditionField } from './conditions';
 export { HumanCheck, type HumanCheckOptions, type HumanCheckFailure } from './controls/HumanCheck';
 export { Button, type ButtonOptions, type ButtonVariant } from './controls/Button';
-export { Form, type FormOptions, type FormValues, type SubmitResult, type SerializedValues, type SerializeOptions, type SetValuesResult } from './Form';
+export { Form, type FormOptions, type FormValues, type SubmitResult, type SerializedValues, type SerializeOptions, type SetValuesResult, type FileReference, type FileUploader, type SerializableValue } from './Form';
 export { rulesToJsonSchema, publicRules, type JsonSchema, type ToJsonSchemaOptions } from '../../shared/jsonSchema';
 export { Column, Row, ScrollView, insets, type Layoutable, type EdgeInsets } from './layout';
 export { Label, StrengthMeter, Toast, PrivacyScreen, estimateStrength } from './widgets';
@@ -24,7 +24,7 @@ export { sanitizeInput, type SanitizeOptions } from './security/sanitize';
 export { Formatters, type TextInputFormatter } from './security/formatters';
 export { RateLimiter } from './security/RateLimiter';
 export { BotGuard } from './security/BotGuard';
-export { secureSubmit, readCsrfToken, type SecureSubmitOptions } from './security/secureSubmit';
+export { secureSubmit, secureUpload, readCsrfToken, type SecureSubmitOptions } from './security/secureSubmit';
 export { ruleValidator, fromRule } from "./rules";
 export { sealSecret, sealBytes, b64uEncode, b64uDecode, type EncryptionKey } from './security/envelope';
 export { OtpInput, type OtpInputOptions } from './controls/OtpInput';

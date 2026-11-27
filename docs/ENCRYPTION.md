@@ -94,6 +94,41 @@ and 5 that must be rejected: wrong field, replayed challenge, tampered ciphertex
 runs every decryptor whose toolchain is installed and reports PASS/FAIL. Run it on a machine with PHP and Java to
 verify those two.
 
+## Files (PFF1)
+
+File fields (`pixiformui/file`) encrypt each file in the browser before it is uploaded. Every file gets its own key,
+and that key travels inside an ordinary PFE1 envelope, so any PFE1 decryptor can open it.
+
+```
+fileKey  = 32 random bytes          iv = 12 random bytes            (fresh for every file)
+blob     = "PFF1" ‖ iv ‖ AES-256-GCM(fileKey, iv, file bytes, aad = "pff1")      ← uploaded (POST, octet-stream)
+manifest = {"v":1,"k":b64u(fileKey),"name":…,"type":…,"size":…,"sha256":b64u(SHA-256(blob))}
+key      = PFE1 envelope of the manifest, context = challenge "|" field "[" index "]"   ← submitted
+```
+
+**Upload, then submit.** The form POSTs each `blob` to its upload URL (`config.upload`, with the CSRF header and the
+same origin rules as submits). The server stores the bytes and answers `{ "id": "…" }`, an opaque id of 8-128
+characters `[A-Za-z0-9_-]`. The submitted JSON then carries, for the field, `[{ "id": "…", "key": "pfe1.…" }, …]`.
+
+**Opening a file.** Open `key` like any envelope, with the context `"{challenge}|{field}[{index}]"`. Parse the
+manifest, check that SHA-256 of the stored blob equals `sha256` (constant-time), then decrypt
+`blob[16:]` with `fileKey`, IV `blob[4:16]` and AAD `"pff1"`. The manifest's `name`, `type` and `size` describe the
+original file; treat them as untrusted input (sanitize the name before using it in a path or a header).
+
+| What it protects | How |
+| --- | --- |
+| File content and name in transit, in storage and in logs | Encrypted in the browser; the upload is opaque bytes with a size |
+| Swapping one upload for another | The manifest pins the blob's SHA-256 |
+| Moving a file to another field or slot, or replaying it | The envelope is bound to the challenge, field and index |
+| Tampering | AES-GCM authentication on both the envelope and the blob |
+
+Decryptors with file support: Node (`openFile` in `server/pfe.ts`) and Python (`open_file` in
+`server/decrypt/python/pfe.py`), both checked by `npm run test:pfe`. For other languages, combine their PFE1
+decryptor with the four steps above (SHA-256, then AES-256-GCM).
+
+**Size.** The whole file is encrypted in memory, so set a sensible `maxSize` (default 10 MB, and enforce the same
+limit on the server's upload endpoint).
+
 ## Threat model: what PFE1 does and doesn't do
 
 - ✅ Passwords stay unreadable in proxy/CDN/gateway logs, request-body logging, and TLS-inspection boxes.

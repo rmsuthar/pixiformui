@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>File field test</title>
+  </head>
+  <body>
+    <div id="f"></div>
+    <script type="module">
+      // Test page for tests/e2e/files.spec.ts: the encryption key and endpoints come from the test.
+      import { mountPixiForm } from '/src/lib/index.ts';
+      import { fileField } from '/src/lib/file/index.ts';
+      window.__handle = await mountPixiForm(document.getElementById('f'), {
+        title: 'Apply',
+        action: '/__test/submit',
+        upload: '/__test/upload',
+        encryptionKey: window.__pfKey,
+        csrfToken: 'test-csrf-token',
+        form: { botGuard: false, rateLimit: false },
+        fields: [
+          { type: 'text', name: 'name', label: 'Name', required: true },
+          fileField({ name: 'cv', label: 'CV and portfolio', accept: ['.pdf', '.txt'], maxSize: 50 * 1024, maxFiles: 2, required: true }),
+        ],
+      });
+    </script>
+  </body>
+</html>

@@ -12,5 +12,3 @@ exclude:
     - dist-lib/**
     - dist-site/**
     - server/decrypt/**
-    - packages/create-pixiformui/**
-    - server/server.ts

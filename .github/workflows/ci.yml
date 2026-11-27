@@ -38,12 +38,12 @@ jobs:
             echo "SNYK_TOKEN secret is not set; skipping Snyk scan in CI."
             exit 0
           fi
-          npx snyk test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
+          npx --yes snyk@1.1308.4 test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            npx snyk monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform
-            npx snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform
+            npx --yes snyk@1.1308.4 monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform
+            npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform
           else
-            npx snyk code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
+            npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
           fi
       - name: Install Playwright browsers (Chromium, WebKit, Firefox)
         run: npx playwright install --with-deps chromium webkit firefox

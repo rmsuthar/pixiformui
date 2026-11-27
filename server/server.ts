@@ -1,7 +1,3 @@
-// filedeepcode ignore HttpToHttps: local dev server runs on 127.0.0.1 behind reverse proxies
-// filedeepcode ignore NoRateLimitingForExpensiveWebOperation: static assets served from local dist
-// filedeepcode ignore ServerLeak: generic sanitized error responses only
-// filedeepcode ignore XSS: static SPA and strict JSON API responses only
 /**
  * PixiForm local server (no framework, no runtime dependencies).
  *
@@ -463,7 +459,7 @@ async function applyIdempotency(req: IncomingMessage, res: ServerResponse, path:
   }
   (req as IncomingMessage & { rawBody?: string }).rawBody = raw;
   const keyHash = createHash('sha256').update(key).digest('hex');
-  const scoped = `${current.sid}:${keyHash}`;
+  const scoped = `${current.sid}:${path}:${keyHash}`;
   const hash = idempotencyHash(raw);
   const now = Date.now();
   const existing = idempotency.get(scoped);
@@ -643,11 +639,11 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
       return json(res, 400, { ok: false, message: 'Malformed JSON.' });
     }
     const { session } = current;
-    const rawHost = (req.headers.host ?? '').toLowerCase();
-    const host = ALLOWED_HOSTS.has(rawHost) ? (rawHost.startsWith('127.0.0.1') ? '127.0.0.1' : 'localhost') : 'localhost';
-    const rpId = host;
+    // Safe to use: the Host header was checked against ALLOWED_HOSTS before any request gets here.
+    const host = (req.headers.host ?? '').toLowerCase();
+    const rpId = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '');
     const headerOrigin = req.headers.origin;
-    const origin = headerOrigin && headerOrigin !== 'null' ? headerOrigin : `${PROD && process.env.HTTPS === '1' ? 'https' : 'http'}://${host}:${PORT}`;
+    const origin = headerOrigin && headerOrigin !== 'null' ? headerOrigin : `${PROD && process.env.HTTPS === '1' ? 'https' : 'http'}://${host}`;
     const newChallenge32 = () => b64u(randomBytes(32));
     const takePending = (type: 'register' | 'login') => {
       const p = session.passkey;
@@ -852,9 +848,6 @@ async function serveIndexHtml(res: ServerResponse): Promise<void> {
 }
 
 async function serveStatic(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
-  const ip = clientIp(req);
-  const limit = rateLimit(`static:${ip}`, 300, 60_000);
-  if (!limit.ok) return json(res, 429, { message: 'Too many requests.' }, { 'Retry-After': String(limit.retryAfter) });
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { message: 'Method not allowed.' });
   let rel: string;
   try {
@@ -886,7 +879,6 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, path: stri
 type Middleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void;
 let viteMiddleware: Middleware | null = null;
 
-// deepcode ignore HttpToHttps: local development server binds to 127.0.0.1; production TLS terminated upstream
 const server = createServer(async (req, res) => {
   const started = Date.now();
   securityHeaders(res);

@@ -28,7 +28,7 @@ export { secureSubmit, secureUpload, readCsrfToken, type SecureSubmitOptions } f
 export { ruleValidator, fromRule } from "./rules";
 export { sealSecret, sealBytes, b64uEncode, b64uDecode, type EncryptionKey } from './security/envelope';
 export { OtpInput, type OtpInputOptions } from './controls/OtpInput';
-export { mountPixiForm, actionSubmitter, type PixiFormConfig, type PixiFormHandle, type FieldConfig, type ThemeInput } from './mount';
+export { mountPixiForm, actionSubmitter, registerFieldType, type PixiFormConfig, type PixiFormHandle, type FieldConfig, type ThemeInput } from './mount';
 export { PixiFormElement, definePixiFormElement, type PixiFormElementConfig, type PixiFormSubmitDetail } from './element';
 export { Tooltip } from './core/Tooltip';
 export { DatePicker, type DatePickerOptions, type DatePickerTimeOptions } from './controls/DatePicker';

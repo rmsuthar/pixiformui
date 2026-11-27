@@ -7,9 +7,11 @@ import { resolve } from 'node:path';
  *   dist-lib/pixiformui.standalone.js  ESM, minified, registers <pixi-form> (plain HTML)
  *   dist-lib/pixiformui-ssr.js         pixiformui/ssr: server-rendered placeholder (no DOM needed)
  *   dist-lib/pixiformui-file.js        pixiformui/file: encrypted file uploads; imports the core from 'pixiformui'
+ *   dist-lib/pixiformui-file.standalone.js  standalone + file uploads, for plain HTML (one script)
  */
 export default defineConfig(({ mode }) => {
-  const standalone = mode === 'standalone';
+  const standaloneFile = mode === 'standalone-file';
+  const standalone = mode === 'standalone' || standaloneFile;
   const ssr = mode === 'ssr';
   const file = mode === 'file';
   // pixiformui/file shares the app's copy of the core (one Control class, one renderer).
@@ -24,9 +26,9 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       minify: standalone ? 'terser' : false,
       lib: {
-        entry: resolve(__dirname, file ? 'src/lib/file/index.ts' : ssr ? 'src/lib/ssr.ts' : standalone ? 'src/lib/standalone.ts' : 'src/lib/index.ts'),
+        entry: resolve(__dirname, file ? 'src/lib/file/index.ts' : ssr ? 'src/lib/ssr.ts' : standaloneFile ? 'src/lib/standalone-file.ts' : standalone ? 'src/lib/standalone.ts' : 'src/lib/index.ts'),
         formats: ['es'],
-        fileName: () => (file ? 'pixiformui-file.js' : ssr ? 'pixiformui-ssr.js' : standalone ? 'pixiformui.standalone.js' : 'pixiformui.js'),
+        fileName: () => (file ? 'pixiformui-file.js' : ssr ? 'pixiformui-ssr.js' : standaloneFile ? 'pixiformui-file.standalone.js' : standalone ? 'pixiformui.standalone.js' : 'pixiformui.js'),
       },
       rollupOptions: {
         output: { inlineDynamicImports: true },

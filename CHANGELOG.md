@@ -6,7 +6,9 @@
   canvas drop zone with file chips (picker, drag and drop, keyboard). Each file is encrypted in the browser with its
   own key (PFF1: AES-256-GCM, key sealed in a PFE1 envelope with the file's name and type), uploaded to
   `config.upload`, and submitted as `[{ id, key }]`. File names never enter the page. Decryptors: `openFile` (Node)
-  and `open_file` (Python), in the cross-language conformance test. A separate 5 KB import that shares the core.
+  and `open_file` (Python), in the cross-language conformance test. A separate 5 KB import that shares the core;
+  importing it also enables `{ type: 'file' }` in plain configs, and `pixiformui-file.standalone.js` is the
+  all-in-one script with files for plain HTML pages. `registerFieldType()` lets other add-ons do the same.
 - `secureUpload()`, `serialize({ upload })`, a `custom` field type for add-ons, and `Control.isAction` (buttons are
   recognised by a flag instead of their ARIA role).
 - **Describe a form (playground):** type what you need ("job application with CV link and notice period") and

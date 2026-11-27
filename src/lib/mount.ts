@@ -32,7 +32,7 @@ import { HiddenField, type HiddenFieldOptions } from './controls/HiddenField';
 import { conditionFields, evaluateCondition, type ShowIf } from './conditions';
 import { Switch, type SwitchOptions } from './controls/Switch';
 import { TextArea, TextInput, type TextAreaOptions, type TextInputOptions } from './controls/TextInput';
-import type { Control } from './core/Control';
+import type { Control, ControlOptions } from './core/Control';
 import { FormUI } from './core/FormUI';
 import type { Focusable } from './core/types';
 import { FormAnalytics, type AnalyticsOptions } from './analytics';
@@ -66,6 +66,15 @@ import {
 import { Label, PrivacyScreen, StrengthMeter, Toast } from './widgets';
 import { createPopout } from './popout';
 
+// ------------------------------------------------------------------ add-on field types
+const fieldTypes = new Map<string, (ui: FormUI, opts: Record<string, unknown>) => Control<any>>();
+
+/** Lets an add-on provide a field type usable in plain configs (pixiformui/file registers 'file'). */
+export function registerFieldType(type: string, create: (ui: FormUI, opts: Record<string, unknown>) => Control<any>): void {
+  if (!/^[a-z][a-z0-9-]{1,30}$/.test(type)) throw new Error(`registerFieldType: invalid type "${type}"`);
+  fieldTypes.set(type, create);
+}
+
 // ------------------------------------------------------------------ config types
 type WithRow<T> = T & {
   /** Fields sharing the same `row` key are placed side by side (stacked on narrow screens). */
@@ -94,6 +103,8 @@ export type FieldConfig =
   | WithRow<{ type: 'heading' | 'paragraph'; text: string }>
   /** A control from an add-on, e.g. fileField() from pixiformui/file. */
   | WithRow<{ type: 'custom'; create: (ui: FormUI) => Control<any> }>
+  /** Encrypted file upload; needs pixiformui/file loaded (it registers this type). */
+  | WithRow<{ type: 'file'; accept?: string[]; maxSize?: number; maxFiles?: number; acceptLabel?: string } & Omit<ControlOptions<unknown>, 'validators'>>
   | WithRow<GroupConfig>;
 
 /** A titled section of fields (a fieldset). Values still submit with flat field names. */
@@ -474,8 +485,12 @@ async function mountInner(
         case 'custom':
           c = (opts as unknown as { create: (ui: FormUI) => Control<any> }).create(ui);
           break;
-        default:
-          throw new Error(`mountPixiForm: unknown field type "${String(type)}"`);
+        default: {
+          const make = fieldTypes.get(String(type));
+          if (!make) throw new Error(`mountPixiForm: unknown field type "${String(type)}"${type === 'file' ? ' (import pixiformui/file to enable file fields)' : ''}`);
+          c = make(ui, opts as unknown as Record<string, unknown>);
+          break;
+        }
       }
       if (controls[c.fieldName] || groups[c.fieldName]) throw new Error(`mountPixiForm: duplicate field name "${c.fieldName}"`);
       controls[c.fieldName] = c;

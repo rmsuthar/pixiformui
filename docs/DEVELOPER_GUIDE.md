@@ -2747,6 +2747,11 @@ mountPixiForm(host, {
 });
 ```
 
+**Plain configs and HTML pages.** Importing `pixiformui/file` also enables `{ type: 'file', name, label, … }` in
+plain configs (JSON, `<pixi-form>`). For a page without a bundler, load the all-in-one script that includes files
+instead of the standard one: `pixiformui-file.standalone.js` (about 70 KB gzipped), which registers `<pixi-form>` and
+the `file` type with one copy of the library.
+
 | Option | Default | Notes |
 | --- | --- | --- |
 | `accept` | any | Extensions (`'.pdf'`) and MIME types (`'image/*'`, `'application/pdf'`), as for `<input accept>`. |

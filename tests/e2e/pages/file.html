@@ -20,7 +20,10 @@
         form: { botGuard: false, rateLimit: false },
         fields: [
           { type: 'text', name: 'name', label: 'Name', required: true },
-          fileField({ name: 'cv', label: 'CV and portfolio', accept: ['.pdf', '.txt'], maxSize: 50 * 1024, maxFiles: 2, required: true }),
+          // ?json: the plain-config form ({ type: 'file' }, registered by importing pixiformui/file).
+          location.search.includes('json')
+            ? { type: 'file', name: 'cv', label: 'CV and portfolio', accept: ['.pdf', '.txt'], maxSize: 50 * 1024, maxFiles: 2, required: true }
+            : fileField({ name: 'cv', label: 'CV and portfolio', accept: ['.pdf', '.txt'], maxSize: 50 * 1024, maxFiles: 2, required: true }),
         ],
       });
     </script>

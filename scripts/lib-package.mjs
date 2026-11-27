@@ -30,10 +30,11 @@ const pkg = {
     './standalone': { types: './types/src/lib/standalone.d.ts', import: './pixiformui.standalone.js' },
     './ssr': { types: './types/src/lib/ssr.d.ts', import: './pixiformui-ssr.js' },
     './file': { types: './types/src/lib/file/index.d.ts', import: './pixiformui-file.js' },
+    './file/standalone': { types: './types/src/lib/standalone-file.d.ts', import: './pixiformui-file.standalone.js' },
     './package.json': './package.json',
   },
-  files: ['pixiformui.js', 'pixiformui.js.map', 'pixiformui.standalone.js', 'pixiformui.standalone.js.map', 'pixiformui-ssr.js', 'pixiformui-ssr.js.map', 'pixiformui-file.js', 'pixiformui-file.js.map', 'types', 'README.md', 'LICENSE'],
-  sideEffects: ['./pixiformui.standalone.js', './pixiformui.js'],
+  files: ['pixiformui.js', 'pixiformui.js.map', 'pixiformui.standalone.js', 'pixiformui.standalone.js.map', 'pixiformui-ssr.js', 'pixiformui-ssr.js.map', 'pixiformui-file.js', 'pixiformui-file.js.map', 'pixiformui-file.standalone.js', 'pixiformui-file.standalone.js.map', 'types', 'README.md', 'LICENSE'],
+  sideEffects: ['./pixiformui.standalone.js', './pixiformui.js', './pixiformui-file.js', './pixiformui-file.standalone.js'],
   engines: { node: '>=18' },
   publishConfig: { access: 'public' },
 };

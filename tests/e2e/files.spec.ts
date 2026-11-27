@@ -80,3 +80,15 @@ test('file field: picker and drop, checks, encrypted uploads and references that
   expect(first.data.equals(PDF)).toBe(true);
   expect([second.manifest.name, second.data.toString()]).toEqual(['cover.txt', TXT.toString()]);
 });
+
+test('file field: { type: "file" } works in a plain config once pixiformui/file is loaded', async ({ page }) => {
+  await page.addInitScript((k) => ((window as unknown as { __pfKey: unknown }).__pfKey = k), { alg: 'PFE1', kid: key.kid, spki: key.spki, challenge });
+  await page.goto('/tests/e2e/pages/file.html?json');
+  const cvItem = page.locator('.pixiform-a11y [aria-label^="CV and portfolio"]').first();
+  await expect(cvItem).toHaveAttribute('role', 'button');
+  await expect(cvItem).toHaveAccessibleDescription(/PDF, TXT · up to 50 KB · 2 files\. No file attached/);
+  await focusField(page, 'CV and portfolio');
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.keyboard.press('Enter')]);
+  await chooser.setFiles([{ name: 'a.pdf', mimeType: 'application/pdf', buffer: PDF }]);
+  await expect(cvItem).toHaveAccessibleDescription(/1 file attached/);
+});

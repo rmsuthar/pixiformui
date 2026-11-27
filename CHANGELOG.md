@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.14
+
+- **Exams:** on narrow screens the timer and "Mark for review" stack instead of overlapping.
+
 ## 0.1.13
 
 - **Exams and quizzes (`pixiformui/exam`):** `mountExam(host, config, { questions, timeLimit | endsAt, allowBack,

@@ -82,6 +82,11 @@ emails, or write to us.
 - **Translated forms** (optional): if your page asks for it, your form's own texts (labels, help, options, never
   visitors' answers) are translated into each visitor's browser language by Cloudflare Workers AI and cached for 90
   days. The request reveals the visitor's preferred language; their IP is used only as a salted hash for rate limits.
+- **Quizzes** (optional): the questions and answer key you write, the candidate names you enter, and each candidate's
+  result (score, right or wrong per question, time taken, how often they left the page) are stored readable, so they
+  can be scored and shown to you. To score, the chosen option of each multiple-choice question is read; open answers
+  and everything else in a quiz submission stay end-to-end encrypted. Candidates' links are stored only as one-way
+  hashes. Quiz data is deleted with the form or your account.
 - **Ask your inbox** (optional): when you ask a question about submissions, your browser decrypts the submissions you
   have loaded and sends their text (never password fields or files) to Cloudflare Workers AI to answer that one
   question. Neither we nor the feature store the text or the answer, and we don't log them; only a monthly count of

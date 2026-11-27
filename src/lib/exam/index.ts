@@ -241,10 +241,21 @@ class ExamHeader extends Container {
     this.paintTimer();
     const markW = Math.min(200, width);
     this.mark.layout(markW);
-    const rowH = Math.max(this.mark.layoutHeight, Math.ceil(this.timer.height));
-    this.timer.position.set(0, Math.round((rowH - this.timer.height) / 2));
-    this.mark.position.set(Math.max(0, width - markW), Math.round((rowH - this.mark.layoutHeight) / 2));
-    let y = rowH;
+    const timerW = this.timer.visible ? Math.ceil(this.timer.width) : 0;
+    let y: number;
+    if (timerW + 16 + markW <= width) {
+      // Side by side: the timer on the left, "Mark for review" on the right.
+      const rowH = Math.max(this.mark.layoutHeight, Math.ceil(this.timer.height));
+      this.timer.position.set(0, Math.round((rowH - this.timer.height) / 2));
+      this.mark.position.set(width - markW, Math.round((rowH - this.mark.layoutHeight) / 2));
+      y = rowH;
+    } else {
+      // Narrow screens: stacked.
+      this.timer.position.set(0, 0);
+      const top = this.timer.visible ? Math.ceil(this.timer.height) + 8 : 0;
+      this.mark.position.set(0, top);
+      y = top + this.mark.layoutHeight;
+    }
     if (this.navigator) {
       this.navigator.layout(width);
       this.navigator.position.set(0, y + 14);

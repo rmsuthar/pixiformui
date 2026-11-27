@@ -64,6 +64,7 @@ import {
   type Theme,
 } from './theme';
 import { Label, PrivacyScreen, StrengthMeter, Toast } from './widgets';
+import { createPopout } from './popout';
 
 // ------------------------------------------------------------------ config types
 type WithRow<T> = T & {
@@ -170,6 +171,8 @@ export interface PixiFormConfig {
   loadMargin?: string;
   /** Accessibility: name, system-setting overrides, text scale, outline. Defaults follow the OS. */
   a11y?: A11yOptions;
+  /** A corner button that opens the form in a dialog over the page and back, keeping everything. */
+  popout?: boolean | { label?: string };
   /** Privacy-safe analytics events (never values). See analyticsAdapters for GA4, GTM, Segment, PostHog… */
   analytics?: AnalyticsOptions;
 }
@@ -207,6 +210,10 @@ export interface PixiFormHandle {
   setVisible(name: string, visible: boolean | null): void;
   /** True if the field or group is currently shown (false inside a hidden group). */
   isVisible(name: string): boolean;
+  /** Open the form in a dialog over the page / put it back (see config.popout). */
+  popOut(): void;
+  popIn(): void;
+  readonly poppedOut: boolean;
   destroy(): void;
 }
 
@@ -564,6 +571,15 @@ async function mountInner(
     ui.content.addChild(scroll);
   }
   const privacy = config.privacyScreen === false ? null : new PrivacyScreen(ui);
+  const popoutCfg = typeof config.popout === 'object' ? config.popout : {};
+  const popout = createPopout(host, {
+    label: popoutCfg.label ?? config.title ?? config.a11y?.label ?? 'Form',
+    maxWidth: config.maxWidth ?? 640,
+    fill: !autoHeight,
+    colors: () => theme.colors,
+    onChange: (open) => events.emit(open ? 'popout' : 'popin', {}),
+  });
+  if (config.popout) host.appendChild(popout.button);
 
   let frame = 0;
   // ---- 'auto' layout for tall forms: a canvas "window" that follows the page scroll.
@@ -620,6 +636,7 @@ async function mountInner(
     frame = 0;
     if (destroyed) return;
     const width = Math.max(280, host.clientWidth);
+    popout.place(width);
     if (autoHeight) {
       surface.layout(width);
       formHeight = Math.ceil(surface.layoutHeight);
@@ -727,6 +744,7 @@ async function mountInner(
     ui.setTheme(theme);
     app.renderer.background.color = transparent ? 0x000000 : theme.colors.background;
     app.renderer.background.alpha = transparent ? 0 : 1;
+    popout.paint();
   };
   const onScheme = () => modeSetting === 'auto' && !(themeInput && typeof themeInput === 'object' && 'fontSize' in themeInput) && applyTheme();
   mq.addEventListener('change', onScheme);
@@ -763,8 +781,14 @@ async function mountInner(
       resolveVisibility();
     },
     isVisible: (name) => toggleByName.get(name)?.shown ?? false,
+    popOut: () => popout.open(),
+    popIn: () => popout.close(),
+    get poppedOut() {
+      return popout.isOpen;
+    },
     destroy() {
       if (destroyed) return;
+      popout.destroy(); // back on the page before anything is torn down
       destroyed = true;
       cancelAnimationFrame(frame);
       ro.disconnect();

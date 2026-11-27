@@ -1908,6 +1908,7 @@ Fields with the same `row` key sit side by side and stack below 520 px.
 | `transparent` | `true` in `auto` | The page background shows through around the card. |
 | `card` | `true` | Rounded surface behind the form. |
 | `privacyScreen` | `true` | Covers the form when the window loses focus. |
+| `popout` | `false` | `true` adds a button at the form's top-right corner that opens it in a larger dialog over the page and puts it back, keeping everything typed ([below](#pop-out-a-larger-view-without-losing-anything)). `{ label }` names the dialog for screen readers (default: the title). |
 | `toasts` | `true` | Built-in success/failure toasts. Set `false` to show messages in your own UI via events. |
 | `id` | — | Form identifier (analytics `formId`). |
 | `action` | — | Submit without code: POST the serialized form here ([§25.2](#252-ajax-without-code-action)). `onSubmit` becomes optional. |
@@ -1936,7 +1937,31 @@ fields: [
 
 **The handle:** `values()`, `submit()`, `reset()`, `get(name)`, `controls`, `groups`, `analytics`, `setTheme(theme, mode?)`,
 `toast(msg, kind)`, `on(type, fn)` / `once(type, fn)` → unsubscribe (typed events, [§26](#26-events-and-loading)),
-`state`, `loaded`, `isDirty()`, plus `form`, `ui` and `app` for advanced use, and `destroy()`.
+`state`, `loaded`, `isDirty()`, `setVisible()` / `isVisible()`, `popOut()` / `popIn()` / `poppedOut`, plus `form`, `ui`
+and `app` for advanced use, and `destroy()`.
+
+#### Pop-out: a larger view without losing anything
+
+Long or detailed forms are easier to fill in a focused view. With `popout: true` the form gets a small button at its
+top-right corner. It opens the **same form** in a dialog over the page: the form's element moves into the dialog, so
+values, errors, focus, passwords and the human check all stay exactly as they were, and nothing is rebuilt. A
+placeholder keeps the page layout from jumping. The button (or Escape, or a click outside the form) puts it back.
+
+```ts
+const handle = await mountPixiForm(host, { title: 'Create your account', fields, popout: true, onSubmit });
+
+// Or drive it from your own code, with or without the button:
+handle.popOut();                 // open in the dialog
+handle.popIn();                  // back to its place
+handle.poppedOut;                // true while open
+handle.on('popout', () => track('form_expanded'));
+handle.on('popin', () => track('form_restored'));
+```
+
+While it's open, the rest of the page is inert (keyboard and screen readers stay in the dialog) and doesn't scroll.
+An open list or calendar handles Escape first, so Escape closes the dialog only when nothing else needs it. The
+button follows the theme, and only uses CSSOM styles, so a strict Content-Security-Policy needs no changes.
+`<pixi-form>` has the same `popOut()` and `popIn()` methods, and fires `pixiform-popout` and `pixiform-popin`.
 
 Always call `destroy()` when the form goes away: it wipes secrets, removes listeners and releases the canvas.
 
@@ -2304,6 +2329,7 @@ pixi-form[data-pixiform-state='error']::after { content: 'The form could not be 
 | `blocked` | `{ reason, code }` | Rate limit (`'rate_limit'`) or bot check (`'bot'`). |
 | `reset` | `{}` | `handle.reset()` ran (also clears `dirty`). |
 | `idle` | `{}` | Secrets were wiped after inactivity. |
+| `popout` / `popin` | `{}` | The form opened in the pop-out dialog, or went back to its place. |
 
 For a confirmation step, cancel the first attempt and submit again once the person agrees:
 

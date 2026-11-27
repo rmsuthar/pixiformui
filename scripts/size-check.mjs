@@ -5,7 +5,7 @@ import { gzipSync } from 'node:zlib';
 const BUDGETS = {
   'dist-lib/pixiformui.standalone.js': 68 * 1024, // everything, minified (≈64 KB in 0.1.6: + proof-of-work, human check)
   'dist-lib/pixiformui-ssr.js': 8 * 1024, // pixiformui/ssr: skeleton + its CSS
-  'dist-lib/pixiformui.js': 88 * 1024, // ES module, unminified with comments; apps minify it (≈84 KB in 0.1.6)
+  'dist-lib/pixiformui.js': 89 * 1024, // ES module, unminified with comments; apps minify it (≈84 KB in 0.1.6; +1 KB budget in 0.1.10 for the pop-out dialog)
 };
 let failed = false;
 for (const [file, budget] of Object.entries(BUDGETS)) {

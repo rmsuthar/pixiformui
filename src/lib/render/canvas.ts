@@ -316,7 +316,7 @@ type Op =
   | { kind: 'fill'; color: number; alpha: number; path: Path2D }
   | { kind: 'stroke'; style: Required<Omit<StrokeInput, 'cap' | 'join'>> & { cap: CanvasLineCap; join: CanvasLineJoin }; path: Path2D; closed: boolean };
 
-const css = (c: number) => `#${(c & 0xffffff).toString(16).padStart(6, '0')}`;
+export const css = (c: number) => `#${(c & 0xffffff).toString(16).padStart(6, '0')}`;
 
 export class Graphics extends Container {
   private ops: Op[] = [];

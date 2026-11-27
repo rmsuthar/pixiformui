@@ -97,6 +97,14 @@ export class PixiFormElement extends ElementBase {
     return this.#handle?.isVisible(name) ?? false;
   }
 
+  /** Open the form in a dialog over the page / put it back (config.popout adds a button for this). */
+  popOut(): void {
+    this.#handle?.popOut();
+  }
+  popIn(): void {
+    this.#handle?.popIn();
+  }
+
   connectedCallback(): void {
     if (!this.style.display) this.style.display = 'block';
     if (this.#config && !this.#handle) void this.#mount();

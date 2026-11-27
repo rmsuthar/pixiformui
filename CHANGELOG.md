@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Pop-out:** `popout: true` adds a button at the form's top-right corner that opens the same form in a larger
+  dialog over the page and puts it back (the button, Escape, or a click outside). Values, errors, focus and secrets
+  are kept and nothing is rebuilt; the page behind is inert while it's open. `handle.popOut()`, `popIn()` and
+  `poppedOut`, `popout` / `popin` events, and the same methods on `<pixi-form>`. The home page demo has it on.
+- **Home page demo:** a read-only Source tab with the demo's complete code, and username rules (no spaces, reserved
+  names) showing field validators and business rules on submit.
+
 ## 0.1.9
 
 Security hardening from a Snyk Code and CodeQL review. No API changes.

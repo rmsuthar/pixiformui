@@ -105,6 +105,7 @@ export function mountDemoForm(host: HTMLElement, hooks: DemoHooks): Promise<Pixi
     mode: hooks.mode,
     maxWidth: 640,
     privacyScreen: true,
+    popout: true, // the ⤢ button at the top right: opens the form in a dialog and back, keeping what you typed
     fields: demoFields,
     submitText: 'Create account',
     resetText: 'Reset',

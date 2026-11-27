@@ -60,6 +60,10 @@ export interface PixiFormEventMap {
   reset: Record<string, never>;
   /** Secrets were wiped after inactivity. */
   idle: Record<string, never>;
+  /** The form opened in a dialog over the page (config.popout or handle.popOut()). */
+  popout: Record<string, never>;
+  /** The form went back to its place on the page. */
+  popin: Record<string, never>;
 }
 
 export type PixiFormEventType = keyof PixiFormEventMap;
@@ -70,7 +74,7 @@ export type PixiFormListeners = { [K in PixiFormEventType]?: PixiFormListener<K>
 export const PIXIFORM_EVENTS: readonly PixiFormEventType[] = [
   'loadstart', 'load', 'resize', 'themechange', 'a11ychange', 'error', 'destroy',
   'change', 'dirty', 'focus', 'blur', 'validate', 'grouptoggle', 'fieldvisibility',
-  'beforesubmit', 'submitting', 'success', 'failure', 'invalid', 'blocked', 'reset', 'idle',
+  'beforesubmit', 'submitting', 'success', 'failure', 'invalid', 'blocked', 'reset', 'idle', 'popout', 'popin',
 ];
 
 /**

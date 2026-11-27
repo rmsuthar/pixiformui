@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exam test</title>
+  </head>
+  <body>
+    <div id="f"></div>
+    <script type="module">
+      // Test page for tests/e2e/exam.spec.ts. ?seconds=N sets a time limit, ?noback disallows going back.
+      import { mountExam } from '/src/lib/exam/index.ts';
+      const q = new URLSearchParams(location.search);
+      window.__submitted = null;
+      window.__timeUp = false;
+      window.__exam = await mountExam(document.getElementById('f'), {
+        title: 'Astronomy quiz',
+        form: { botGuard: false, rateLimit: false },
+        onSubmit: async (values) => ((window.__submitted = values), { ok: true, message: 'Answers received.' }),
+      }, {
+        timeLimit: Number(q.get('seconds') ?? 600),
+        allowBack: !q.has('noback'),
+        onTimeUp: () => (window.__timeUp = true),
+        questions: [
+          { id: 'q1', text: 'Which planet is the largest?', options: ['Earth', 'Jupiter', 'Mars'] },
+          { id: 'q2', text: 'Which is closest to the Sun?', options: ['Mercury', 'Venus', 'Neptune'] },
+          { id: 'q3', text: 'How many moons does Mars have?', options: ['None', 'One', 'Two'] },
+          { id: 'q4', text: 'In one sentence: why do we have seasons?', answer: 'long' },
+        ],
+      });
+    </script>
+  </body>
+</html>

@@ -45,6 +45,7 @@ reference server. This guide covers everything you need to build, style, extend,
 32. [Encrypted file uploads](#32-encrypted-file-uploads)
 33. [Forms in the visitor's language](#33-forms-in-the-visitors-language)
 34. [Multi-step forms](#34-multi-step-forms)
+35. [Exams and quizzes](#35-exams-and-quizzes)
 
 ---
 
@@ -2886,4 +2887,55 @@ mountPixiForm(host, {
 - **From code:** `handle.currentStep` (index among the steps shown), `handle.goToStep(index)`, and the `step`
   event (`{ index, count, title }`), e.g. to save a draft after each step.
 - **Server-side rendering:** `pixiformSkeleton()` shows the first step and a Next button.
+
+---
+
+## 35. Exams and quizzes
+
+`mountExam()` from `pixiformui/exam` (about 4 KB, sharing the core) turns a list of questions into a timed exam: one
+question per screen, built on [multi-step forms](#34-multi-step-forms).
+
+```ts
+import { mountExam } from 'pixiformui/exam';
+
+const exam = await mountExam(host, {
+  title: 'Unit 3 quiz',
+  action: '/api/answers', session: '/api/session', // or onSubmit; encryption and the rest work as usual
+}, {
+  endsAt: deadlineFromYourServer,  // or timeLimit: 20 * 60 (seconds)
+  shuffleQuestions: true,
+  shuffleOptions: true,
+  questions: [
+    { id: 'q1', text: 'Which planet is the largest?', options: ['Earth', 'Jupiter', 'Mars'] }, // values a, b, c
+    { id: 'q2', text: 'Pick the gas giants', options: [{ value: 'jup', label: 'Jupiter' }, { value: 'mar', label: 'Mars' }] },
+    { id: 'q3', text: 'In one sentence: why do we have seasons?', answer: 'long' },
+  ],
+  onFocusLost: (count) => console.log('left the page', count),
+});
+```
+
+| What people see | Details |
+| --- | --- |
+| **Timer** | "Time left 12:34", red in the last minute, announced to screen readers at 5 and 1 minutes. At zero the answers are submitted as they are, and the form locks. |
+| **Question navigator** | Numbered squares: answered (filled), current (ring), marked for review (amber). Click, or arrow keys and Enter. |
+| **Mark for review** | A checkbox per question; shown in the navigator and listed in the report. |
+| **Finishing early** | With unanswered questions, the first press of "Finish exam" warns; the second submits. |
+| **No going back** | `allowBack: false` hides Back and the navigator. |
+
+**What your server receives:** every answer by question `id` (a choice's value, or the text), plus `examReport`, a
+JSON string: `{ timeTakenMs, focusLost, marked: ['q2'], timedOut }`. Unanswered questions are `null`.
+
+**Keep it fair:**
+- **Score on the server.** Never send the correct answers to the browser. Option values don't change when options are
+  shuffled, so scoring stays simple.
+- **Enforce the deadline on the server.** Pass `endsAt` from your server, so a reload doesn't restart the clock, and
+  reject late submissions there.
+- **Questions aren't in the page's HTML.** They're drawn on the canvas, so they can't be scraped from the source or
+  copied as text. Screen readers still receive them through the accessibility outline, and screenshots are always
+  possible, so treat this as friction, not proof against cheating.
+- **Focus loss is a signal, not proof.** `focusLost` counts the times the window lost focus (another tab or app);
+  decide in your own rules what it means.
+
+`exam.remainingMs`, `exam.marked`, `exam.focusLost` and `exam.handle` (the usual form handle) are available from
+code. The core gained `allowBack`, a `header` slot, `form.lock()` and `form.submit({ skipValidation })` for this.
 

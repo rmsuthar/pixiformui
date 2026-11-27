@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.13
+
+- **Exams and quizzes (`pixiformui/exam`):** `mountExam(host, config, { questions, timeLimit | endsAt, allowBack,
+  shuffleQuestions, shuffleOptions })`: one question per screen, a countdown (announced at 5 and 1 minutes, submits
+  and locks at zero), a keyboard-accessible question navigator (answered, current, marked for review), "Mark for
+  review", a warning before finishing with unanswered questions, focus-loss counting, and an `examReport` with the
+  answers. About 4 KB; shares the core.
+- Core: `allowBack: false` for steps, a `header` slot for add-ons, `form.lock()` is public, and
+  `form.submit({ skipValidation })`.
+
 ## 0.1.12
 
 - **Multi-step forms:** `steps: [{ title, description, fields, showIf }]` shows one screen per step with a progress

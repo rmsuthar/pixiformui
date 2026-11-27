@@ -135,6 +135,10 @@ export interface PixiFormConfig {
    * current step; everything is submitted together on the last step.
    */
   steps?: StepConfig[];
+  /** Multi-step forms: false hides Back (e.g. exams where answers can't be revisited). Default true. */
+  allowBack?: boolean;
+  /** Something drawn above the fields or steps, for add-ons (e.g. an exam's timer and question navigator). */
+  header?: (ui: FormUI) => Layoutable;
   /** Button texts for steps (defaults 'Next', 'Back') and the progress caption (default 'Step {n} of {total}'). */
   nextText?: string;
   backText?: string;
@@ -526,6 +530,7 @@ async function mountInner(
   const items: Layoutable[] = [];
   if (config.title) items.push(new Label(ui, config.title, 'title'));
   if (config.subtitle) items.push(new Label(ui, config.subtitle, 'subtitle'));
+  if (config.header) items.push(config.header(ui));
   // ---- steps (one screen each) or a single screen of fields
   if (config.steps?.length && config.fields?.length) throw new Error('mountPixiForm: use either fields or steps, not both');
   if (!config.steps?.length && !config.fields?.length) throw new Error('mountPixiForm: add at least one field (or steps)');
@@ -631,7 +636,7 @@ async function mountInner(
     const pos = Math.max(0, list.indexOf(current));
     progress.set(pos, list.length, steps[current].title, steps[current].description);
     const last = pos >= list.length - 1;
-    setShown(backBtn, pos > 0);
+    setShown(backBtn, pos > 0 && config.allowBack !== false);
     setShown(nextBtn, !last);
     setShown(submitBtn, last);
   };

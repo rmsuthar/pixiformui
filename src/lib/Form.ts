@@ -143,7 +143,8 @@ export class Form extends EventEmitter {
     this.emit('unlock');
   }
 
-  private lock(): void {
+  /** Disables the form (fields and submit button) until unlock(); used by `once` and by exams when time is up. */
+  lock(): void {
     this._locked = true;
     for (const c of this.controls.values()) c.enabled = false;
     if (this.submitButton) this.submitButton.enabled = false;
@@ -283,7 +284,8 @@ export class Form extends EventEmitter {
     return errors;
   }
 
-  async submit(): Promise<SubmitResult | null> {
+  /** Validates and submits. `skipValidation` sends what's there (e.g. an exam when time is up). */
+  async submit(opts: { skipValidation?: boolean } = {}): Promise<SubmitResult | null> {
     if (this.submitting || this._locked) return null;
     if (Date.now() < this.cooldownUntil) {
       return this.block('Please wait a moment before submitting again.', 'cooldown');
@@ -293,7 +295,7 @@ export class Form extends EventEmitter {
     if (this.submitButton) this.submitButton.loading = true;
     let attempted = false;
     try {
-      const errors = await this.validate();
+      const errors = opts.skipValidation ? {} : await this.validate();
       const names = Object.keys(errors);
       if (names.length) {
         this.controls.get(names[0])?.focus();

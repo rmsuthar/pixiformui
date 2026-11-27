@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.10
 
 - **Encrypted file uploads (`pixiformui/file`):** `fileField({ name, label, accept, maxSize, maxFiles })` adds a
   canvas drop zone with file chips (picker, drag and drop, keyboard). Each file is encrypted in the browser with its

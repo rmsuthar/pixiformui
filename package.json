@@ -1,7 +1,7 @@
 {
   "name": "pixiform",
   "private": true,
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "description": "Secure JavaScript form library rendered on canvas: encrypted passwords, shared validation, accessible, zero dependencies",
   "scripts": {

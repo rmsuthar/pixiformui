@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.11
 
 - **Forms in the visitor's language (`pixiformui/translate`):** `translateConfig(config, { url })` translates every
   visible text of a config (labels, help, options, headings, buttons, "is required" messages) into the browser's

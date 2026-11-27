@@ -1,6 +1,6 @@
 {
   "name": "create-pixiformui",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Start a PixiFormUI app: a demo form and a secure Node server (CSRF, encrypted passwords, proof-of-work, idempotency, shared validation)",
   "keywords": [
     "create",

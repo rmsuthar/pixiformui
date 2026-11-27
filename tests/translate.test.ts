@@ -68,3 +68,14 @@ test('translateConfig with an endpoint: POSTs { source, target, strings } and re
   }
   assert.deepEqual(applyStrings({ fields: [] }, new Map()), { fields: [] });
 });
+
+test('multi-step configs: step titles, descriptions, fields and the Next/Back/progress defaults are translated', async () => {
+  const stepsConfig = { steps: [{ title: 'About you', description: 'Who you are.', fields: [{ type: 'text', name: 'n', label: 'Name' }] }, { title: 'Contact', fields: [{ type: 'email', name: 'e', label: 'Email' }] }] };
+  const strings = configStrings(stepsConfig);
+  assert.deepEqual(strings, ['About you', 'Who you are.', 'Name', 'Contact', 'Email', 'Next', 'Back', 'Step {n} of {total}']);
+  const de: Record<string, string> = { 'About you': 'Über Sie', Name: 'Name', Next: 'Weiter', Back: 'Zurück', 'Step {n} of {total}': 'Schritt {n} von {total}' };
+  const out = await translateConfig(stepsConfig, { target: 'de', translate: async (s) => s.map((x) => de[x] ?? '') });
+  assert.deepEqual([out.steps[0].title, (out as any).nextText, (out as any).backText, (out as any).stepLabel], ['Über Sie', 'Weiter', 'Zurück', 'Schritt {n} von {total}']);
+  const broken = await translateConfig(stepsConfig, { target: 'de', translate: async (s) => s.map((x) => (x.includes('{n}') ? 'Schritt' : x)) });
+  assert.equal((broken as any).stepLabel, undefined, 'a translation that drops {n} or {total} is ignored');
+});

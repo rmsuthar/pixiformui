@@ -102,6 +102,41 @@ const PRESETS: Record<string, { label: string; config: Record<string, unknown> }
       ],
     },
   },
+  steps: {
+    label: 'Multi-step application',
+    config: {
+      title: 'Open an account',
+      theme: 'indigo',
+      submitText: 'Open account',
+      steps: [
+        {
+          title: 'About you',
+          description: 'Who is opening the account.',
+          fields: [
+            { type: 'text', name: 'fullName', label: 'Full name', required: true },
+            { type: 'radio', name: 'kind', label: 'Account type', value: 'personal', direction: 'horizontal', options: [{ value: 'personal', label: 'Personal' }, { value: 'business', label: 'Business' }] },
+          ],
+        },
+        {
+          title: 'Your business',
+          description: 'Shown only for business accounts.',
+          showIf: { field: 'kind', equals: 'business' },
+          fields: [
+            { type: 'text', name: 'company', label: 'Company name', required: true },
+            { type: 'select', name: 'size', label: 'Team size', options: [{ value: '1', label: 'Just me' }, { value: '10', label: '2–10' }, { value: '50', label: '11–50' }, { value: '51', label: '51+' }] },
+          ],
+        },
+        {
+          title: 'Contact',
+          fields: [
+            { type: 'email', name: 'email', label: 'Email', required: true },
+            { type: 'phone', name: 'mobile', label: 'Mobile', defaultCountry: 'IN' },
+            { type: 'checkbox', name: 'terms', label: 'I accept the terms', required: true },
+          ],
+        },
+      ],
+    },
+  },
   conditional: {
     label: 'Conditional fields',
     config: {

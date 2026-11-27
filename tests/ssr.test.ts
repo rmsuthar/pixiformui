@@ -70,3 +70,11 @@ test('pixiformSkeleton applies showIf to initial values and never prints hidden 
   assert.ok(on.includes('Company name'));
   assert.ok(lib.PIXIFORM_SKELETON_CSS.includes('.pf-skel-w520 .pf-skel-card{max-width:520px}'));
 });
+
+test('pixiformSkeleton shows the first step of a multi-step form, with Next', () => {
+  const html = lib.pixiformSkeleton({ title: 'Open an account', steps: [{ title: 'About you', fields: [{ type: 'text', name: 'n', label: 'Full name' }] }, { title: 'Contact', fields: [{ type: 'email', name: 'e', label: 'Email' }] }] });
+  assert.match(html, /About you/);
+  assert.match(html, /Full name/);
+  assert.ok(!html.includes('Email'), 'later steps are not in the placeholder');
+  assert.match(html, /pf-skel-button">Next</);
+});

@@ -61,6 +61,70 @@ export class Label extends Container {
   }
 }
 
+/** Multi-step forms: "Step 2 of 4", the step's title and description, and a progress bar. */
+export class StepProgress extends Container {
+  private readonly caption = new Text({ text: '' });
+  private readonly heading = new Text({ text: '' });
+  private readonly desc = new Text({ text: '' });
+  private readonly bar = new Graphics();
+  private width_ = 0;
+  private height_ = 0;
+  private state = { index: 0, count: 1, title: '', description: '' };
+  constructor(
+    private readonly ui: FormUI,
+    /** "Step {n} of {total}" (translatable). */
+    private readonly template = 'Step {n} of {total}',
+  ) {
+    super();
+    this.addChild(this.caption, this.heading, this.desc, this.bar);
+    ui.on('themechange', () => this.layout(this.width_));
+  }
+  get stepLabel(): string {
+    return this.template.replace('{n}', String(this.state.index + 1)).replace('{total}', String(this.state.count));
+  }
+  set(index: number, count: number, title: string, description = ''): void {
+    this.state = { index, count, title, description };
+    this.layout(this.width_);
+  }
+  a11yText(): { text: string; heading: boolean } {
+    return { text: this.state.title ? `${this.stepLabel}: ${this.state.title}` : this.stepLabel, heading: true };
+  }
+  get layoutHeight(): number {
+    return this.height_;
+  }
+  layout(width: number): void {
+    this.width_ = width;
+    const t = this.ui.theme;
+    const c = t.colors;
+    this.caption.style = style(t, t.helperFontSize, c.textMuted, '600', width);
+    this.caption.text = this.stepLabel;
+    this.heading.style = style(t, Math.round(t.fontSize * 1.2), c.text, '700', width);
+    this.heading.text = this.state.title;
+    this.desc.style = style(t, t.fontSize, c.textMuted, t.fontWeight, width);
+    this.desc.text = this.state.description;
+    let y = 0;
+    this.bar.clear().roundRect(0, 0, width, 6, 3).fill(c.track);
+    const frac = Math.min(1, (this.state.index + 1) / Math.max(1, this.state.count));
+    if (frac > 0) this.bar.roundRect(0, 0, Math.max(6, width * frac), 6, 3).fill(c.primary);
+    this.bar.position.set(0, y);
+    y += 6 + 12;
+    this.caption.position.set(0, y);
+    y += Math.ceil(this.caption.height) + 4;
+    this.heading.visible = !!this.state.title;
+    if (this.heading.visible) {
+      this.heading.position.set(0, y);
+      y += Math.ceil(this.heading.height);
+    }
+    this.desc.visible = !!this.state.description;
+    if (this.desc.visible) {
+      this.desc.position.set(0, y + 4);
+      y += 4 + Math.ceil(this.desc.height);
+    }
+    this.height_ = y;
+    this.emit('resize', this);
+  }
+}
+
 export interface StrengthResult {
   score: 0 | 1 | 2 | 3 | 4;
   label: string;

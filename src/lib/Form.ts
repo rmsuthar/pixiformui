@@ -384,11 +384,15 @@ export class Form extends EventEmitter {
   }
 
   /** Enter (or OTP completion) moves to the next field of THIS form, or submits from the last one. */
+  /** What Enter on the last field does (default: submit). Multi-step forms set it to go to the next step. */
+  enterAction: (() => void) | null = null;
+
   private onFieldSubmit(source?: Control<unknown>): void {
     const list = [...this.controls.values()];
     const idx = source ? list.indexOf(source) : -1;
     const next = list.slice(idx + 1).find((c) => c.isFocusable());
     if (idx >= 0 && next) next.focus();
+    else if (this.enterAction) this.enterAction();
     else void this.submit();
   }
 

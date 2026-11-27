@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Multi-step form test</title>
+  </head>
+  <body>
+    <div id="f"></div>
+    <script type="module">
+      // Test page for tests/e2e/steps.spec.ts.
+      import { mountPixiForm } from '/src/lib/index.ts';
+      window.__submitted = null;
+      window.__steps = [];
+      window.__handle = await mountPixiForm(document.getElementById('f'), {
+        title: 'Open an account',
+        form: { botGuard: false, rateLimit: false },
+        on: { step: (e) => window.__steps.push(e) },
+        onSubmit: async (values) => ((window.__submitted = values), { ok: true, message: 'Account opened.' }),
+        steps: [
+          { title: 'About you', description: 'Who is opening the account.', fields: [
+            { type: 'text', name: 'name', label: 'Full name', required: true },
+            { type: 'radio', name: 'kind', label: 'Account type', value: 'personal', options: [{ value: 'personal', label: 'Personal' }, { value: 'business', label: 'Business' }] },
+          ] },
+          { title: 'Your business', showIf: { field: 'kind', equals: 'business' }, fields: [
+            { type: 'text', name: 'company', label: 'Company name', required: true },
+          ] },
+          { title: 'Contact', fields: [
+            { type: 'email', name: 'email', label: 'Email', required: true },
+          ] },
+        ],
+      });
+    </script>
+  </body>
+</html>

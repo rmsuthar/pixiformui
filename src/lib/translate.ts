@@ -29,7 +29,7 @@ export interface TranslateOptions {
 
 type Obj = Record<string, unknown>;
 const TEXT_KEYS = ['label', 'placeholder', 'helperText', 'info', 'requiredMessage', 'text', 'title', 'description'] as const;
-const TOP_KEYS = ['title', 'subtitle', 'submitText', 'resetText'] as const;
+const TOP_KEYS = ['title', 'subtitle', 'submitText', 'resetText', 'nextText', 'backText', 'stepLabel'] as const;
 const REQUIRED = '{label} is required.';
 const TAG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/i;
 
@@ -58,6 +58,17 @@ export function configStrings(config: Obj): string[] {
     }
   };
   walk(config.fields);
+  // Multi-step forms: step titles and descriptions, then their fields.
+  if (Array.isArray(config.steps)) for (const s of config.steps as Obj[]) {
+    add(s?.title);
+    add(s?.description);
+    walk(s?.fields);
+  }
+  if (Array.isArray(config.steps)) {
+    if (config.nextText === undefined) out.add('Next');
+    if (config.backText === undefined) out.add('Back');
+    if (config.stepLabel === undefined) out.add('Step {n} of {total}');
+  }
   if (needsRequired) out.add(REQUIRED);
   return [...out];
 }
@@ -78,6 +89,11 @@ export function applyStrings<T extends Obj>(config: T, map: Map<string, string>)
   const out: Obj = { ...config };
   for (const k of TOP_KEYS) if (typeof config[k] === 'string') out[k] = tr(config[k]);
   if (Array.isArray(config.fields)) out.fields = (config.fields as Obj[]).map(field);
+  if (Array.isArray(config.steps)) {
+    out.steps = (config.steps as Obj[]).map((s) => (s && typeof s === 'object' ? { ...s, title: tr(s.title), description: tr(s.description), fields: Array.isArray(s.fields) ? (s.fields as Obj[]).map(field) : s.fields } : s));
+    // The library's defaults, translated (only when the config didn't set its own).
+    for (const [k, d] of [['nextText', 'Next'], ['backText', 'Back'], ['stepLabel', 'Step {n} of {total}']] as const) if (config[k] === undefined && map.has(d)) out[k] = map.get(d);
+  }
   return out as T;
 }
 
@@ -115,7 +131,8 @@ export async function translateConfig<T extends Obj>(config: T, opts: TranslateO
     strings.forEach((s, i) => {
       const t = translated[i];
       // Keep the original when a translation is missing, empty, or drops the {label} placeholder.
-      if (typeof t === 'string' && t.trim() && t.length <= s.length * 6 + 40 && (s !== REQUIRED || t.includes('{label}'))) map.set(s, t);
+      const keepsTokens = (s.match(/\{[a-z]+\}/g) ?? []).every((tok) => t?.includes(tok));
+      if (typeof t === 'string' && t.trim() && t.length <= s.length * 6 + 40 && keepsTokens) map.set(s, t);
     });
     return applyStrings(config, map);
   } catch (err) {

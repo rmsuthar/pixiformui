@@ -63,7 +63,7 @@ import {
   type FormPalette,
   type Theme,
 } from './theme';
-import { Label, PrivacyScreen, StrengthMeter, Toast } from './widgets';
+import { Label, PrivacyScreen, StepProgress, StrengthMeter, Toast } from './widgets';
 import { createPopout } from './popout';
 
 // ------------------------------------------------------------------ add-on field types
@@ -116,10 +116,29 @@ export interface GroupConfig extends FieldGroupOptions {
 /** A full Theme, a palette, or a preset accent name. */
 export type ThemeInput = Theme | FormPalette | AccentName;
 
+/** One screen of a multi-step form (config.steps). */
+export interface StepConfig {
+  title: string;
+  description?: string;
+  fields: FieldConfig[];
+  /** Skip this step unless the condition holds (its fields aren't validated or submitted while skipped). */
+  showIf?: ShowIf;
+}
+
 export interface PixiFormConfig {
   /** Identifies the form (analytics `formId`, default accessible name fallback). */
   id?: string;
-  fields: FieldConfig[];
+  /** The fields (for a single-screen form). Use `steps` instead for one screen per step. */
+  fields?: FieldConfig[];
+  /**
+   * A multi-step form: one screen per step, with a progress bar, Back and Next. Next checks only the
+   * current step; everything is submitted together on the last step.
+   */
+  steps?: StepConfig[];
+  /** Button texts for steps (defaults 'Next', 'Back') and the progress caption (default 'Step {n} of {total}'). */
+  nextText?: string;
+  backText?: string;
+  stepLabel?: string;
   /** Your submit handler. Optional when `action` is set. */
   onSubmit?: FormOptions['onSubmit'];
   /**
@@ -228,6 +247,10 @@ export interface PixiFormHandle {
   setVisible(name: string, visible: boolean | null): void;
   /** True if the field or group is currently shown (false inside a hidden group). */
   isVisible(name: string): boolean;
+  /** Multi-step forms: go to a step (index among the steps shown); no validation. */
+  goToStep(index: number): void;
+  /** Multi-step forms: the current step's index among the steps shown (-1 without steps). */
+  readonly currentStep: number;
   /** Open the form in a dialog over the page / put it back (see config.popout). */
   popOut(): void;
   popIn(): void;
@@ -262,7 +285,7 @@ export async function mountPixiForm(host: HTMLElement, config: PixiFormConfig): 
   };
   const strategy = config.load ?? 'eager';
   try {
-    if (!Array.isArray(config.fields) || config.fields.length === 0) throw new Error('mountPixiForm: fields are required');
+    if (!config.fields?.length && !config.steps?.length) throw new Error('mountPixiForm: fields (or steps) are required');
     if (!config.onSubmit && !config.action) throw new Error('mountPixiForm: provide onSubmit or action');
     if (strategy !== 'eager') {
       setState('waiting');
@@ -503,12 +526,30 @@ async function mountInner(
   const items: Layoutable[] = [];
   if (config.title) items.push(new Label(ui, config.title, 'title'));
   if (config.subtitle) items.push(new Label(ui, config.subtitle, 'subtitle'));
-  items.push(...build(config.fields, 0));
+  // ---- steps (one screen each) or a single screen of fields
+  if (config.steps?.length && config.fields?.length) throw new Error('mountPixiForm: use either fields or steps, not both');
+  if (!config.steps?.length && !config.fields?.length) throw new Error('mountPixiForm: add at least one field (or steps)');
+  const progress = config.steps?.length ? new StepProgress(ui, config.stepLabel) : null;
+  const steps: { toggle: Toggle; view: Column; controls: Control<any>[]; title: string; description: string }[] = [];
+  if (progress) {
+    items.push(progress);
+    for (const s of config.steps!) {
+      const before = new Set(Object.keys(controls));
+      const toggle = addToggle('', [], s.showIf, null); // a skipped step hides and excludes everything in it
+      const view = new Column(build(s.fields, 0, toggle), 20);
+      view.visible = false;
+      steps.push({ toggle, view, controls: Object.keys(controls).filter((n) => !before.has(n)).map((n) => controls[n]), title: s.title ?? '', description: s.description ?? '' });
+      items.push(view);
+    }
+  } else items.push(...build(config.fields!, 0));
 
   // ---- buttons + form
   const submitBtn = new Button(ui, { name: 'pixiformSubmit', text: config.submitText ?? 'Submit' });
   const resetBtn = config.resetText ? new Button(ui, { name: 'pixiformReset', text: config.resetText, variant: 'outline' }) : null;
-  items.push(resetBtn ? new Row([resetBtn, submitBtn], 12, 0) : submitBtn);
+  const backBtn = progress ? new Button(ui, { name: 'pixiformBack', text: config.backText ?? 'Back', variant: 'outline' }) : null;
+  const nextBtn = progress ? new Button(ui, { name: 'pixiformNext', text: config.nextText ?? 'Next' }) : null;
+  const buttons = [backBtn, resetBtn, nextBtn, submitBtn].filter((b): b is Button => !!b);
+  items.push(buttons.length > 1 ? new Row(buttons, 12, 0) : submitBtn);
 
   const submitter = config.onSubmit ? null : actionSubmitter(config);
   const form = new Form(ui, { ...(config.form ?? {}), onSubmit: config.onSubmit ?? submitter! });
@@ -574,6 +615,83 @@ async function mountInner(
   visibilityReady = true;
   for (const c of Object.values(controls)) c.on('change', resolveVisibility);
   form.on('reset', resolveVisibility);
+
+  // ---- step navigation
+  let current = -1;
+  const shownSteps = () => steps.map((_, i) => i).filter((i) => steps[i].toggle.shown);
+  const setShown = (b: Button | null, v: boolean) => {
+    if (b && b.visible !== v) {
+      b.visible = v;
+      b.emit('resize', b);
+    }
+  };
+  const updateNav = () => {
+    if (!progress || current < 0) return;
+    const list = shownSteps();
+    const pos = Math.max(0, list.indexOf(current));
+    progress.set(pos, list.length, steps[current].title, steps[current].description);
+    const last = pos >= list.length - 1;
+    setShown(backBtn, pos > 0);
+    setShown(nextBtn, !last);
+    setShown(submitBtn, last);
+  };
+  const showStep = (i: number, focus: boolean) => {
+    if (i < 0 || i >= steps.length) return;
+    if (i !== current) {
+      if (current >= 0) {
+        steps[current].view.visible = false;
+        steps[current].view.emit('resize', steps[current].view);
+      }
+      current = i;
+      steps[i].view.visible = true;
+      steps[i].view.emit('resize', steps[i].view);
+    }
+    updateNav();
+    if (!focus) return;
+    const first = steps[i].controls.find((c) => c.isFocusable());
+    if (first) ui.focus.focus(first, true);
+    ui.announcer.announce(progress!.a11yText().text);
+    events.emit('step', { index: shownSteps().indexOf(i), count: shownSteps().length, title: steps[i].title });
+  };
+  /** Validates the current step only; focuses its first problem. */
+  const stepValid = async (): Promise<boolean> => {
+    const list = steps[current].controls.filter((c) => !c.isAction && !c.excluded);
+    const results = await Promise.all(list.map((c) => ((c.touched = true), c.validate())));
+    const bad = list.findIndex((_, k) => results[k]);
+    if (bad < 0) return true;
+    list[bad].focus();
+    ui.announcer.announce(`Please check this step. ${results[bad]}`, true);
+    return false;
+  };
+  const nextStep = async () => {
+    const list = shownSteps();
+    const pos = list.indexOf(current);
+    if (pos < list.length - 1 && (await stepValid())) showStep(list[pos + 1], true);
+  };
+  const previousStep = () => {
+    const list = shownSteps();
+    const pos = list.indexOf(current);
+    if (pos > 0) showStep(list[pos - 1], true);
+  };
+  if (progress) {
+    nextBtn!.onPress = nextStep;
+    backBtn!.onPress = previousStep;
+    // Enter on a step's last field means Next (and Submit on the last step).
+    form.enterAction = () => void (nextBtn!.visible ? nextStep() : form.submit());
+    // A problem found on submit may be on another step: go there.
+    form.on('invalid', (errors: Record<string, string>) => {
+      const name = Object.keys(errors)[0];
+      const i = steps.findIndex((s) => s.controls.some((c) => c.fieldName === name));
+      if (i >= 0 && i !== current) {
+        showStep(i, false);
+        controls[name]?.focus();
+      }
+    });
+    // Answers can show or skip steps (step showIf): keep the position and counts right.
+    for (const c of Object.values(controls)) c.on('change', () => (steps[current]?.toggle.shown ? updateNav() : showStep(shownSteps().find((i) => i > current) ?? shownSteps()[0], false)));
+    form.on('reset', () => showStep(shownSteps()[0] ?? 0, false));
+    showStep(shownSteps()[0] ?? 0, false);
+  }
   const toast = new Toast(ui);
   const showToasts = config.toasts ?? true;
   if (showToasts) {
@@ -806,6 +924,13 @@ async function mountInner(
       resolveVisibility();
     },
     isVisible: (name) => toggleByName.get(name)?.shown ?? false,
+    goToStep(index) {
+      const i = shownSteps()[index];
+      if (i !== undefined) showStep(i, true);
+    },
+    get currentStep() {
+      return progress ? shownSteps().indexOf(current) : -1;
+    },
     popOut: () => popout.open(),
     popIn: () => popout.close(),
     get poppedOut() {

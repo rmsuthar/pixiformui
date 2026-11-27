@@ -20,7 +20,10 @@ export interface SkeletonConfig {
   title?: string;
   subtitle?: string;
   /** Field configs (FieldConfig[]); read loosely, see SkeletonField. */
-  fields: readonly object[];
+  fields?: readonly object[];
+  /** Multi-step forms: the placeholder shows the first step. */
+  steps?: readonly { title?: string; fields: readonly object[] }[];
+  nextText?: string;
   submitText?: string;
   resetText?: string;
   maxWidth?: number;
@@ -148,14 +151,18 @@ function list(fields: readonly SkeletonField[], values: Map<string, ConditionFie
  * form on; mountPixiForm() removes it on the first frame. Include PIXIFORM_SKELETON_CSS in your CSS.
  */
 export function pixiformSkeleton(config: SkeletonConfig, opts: SkeletonOptions = {}): string {
-  const fields = (config.fields ?? []) as readonly SkeletonField[];
+  const step = config.steps?.[0];
+  const fields = (step?.fields ?? config.fields ?? []) as readonly SkeletonField[];
   const values = initialValues(fields);
   // The next width step up (a placeholder shouldn't be narrower than the real form).
   const width = WIDTHS.find((w) => w >= (config.maxWidth ?? 640)) ?? WIDTHS[WIDTHS.length - 1];
   const head =
     (config.title ? `<span class="pf-skel-title">${esc(config.title)}</span>` : '') +
-    (config.subtitle ? `<span class="pf-skel-subtitle">${esc(config.subtitle)}</span>` : '');
-  const buttons = config.resetText
+    (config.subtitle ? `<span class="pf-skel-subtitle">${esc(config.subtitle)}</span>` : '') +
+    (step?.title ? `<span class="pf-skel-subtitle">${esc(step.title)}</span>` : '');
+  const buttons = (config.steps?.length ?? 0) > 1
+    ? `<span class="pf-skel-button">${esc(config.nextText ?? 'Next')}</span>`
+    : config.resetText
     ? `<div class="pf-skel-row"><div class="pf-skel-cell"><span class="pf-skel-button pf-skel-outline">${esc(config.resetText)}</span></div><div class="pf-skel-cell"><span class="pf-skel-button">${esc(config.submitText ?? 'Submit')}</span></div></div>`
     : `<span class="pf-skel-button">${esc(config.submitText ?? 'Submit')}</span>`;
   const msg = opts.noScriptMessage ?? 'This form needs JavaScript. Please enable it to continue.';

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.12
+
+- **Multi-step forms:** `steps: [{ title, description, fields, showIf }]` shows one screen per step with a progress
+  bar ("Step 2 of 4"), Back and Next. Next checks only the current step; Submit on the last step sends everything
+  once. Conditional steps, Enter as Next, a problem on another step brings it back, only the current step in the
+  outline and Tab order. `handle.currentStep`, `handle.goToStep()`, the `step` event, `nextText` / `backText` /
+  `stepLabel` (translated by `translateConfig()`), and the first step in `pixiformSkeleton()`. A playground preset.
+  Size budgets +2 KB.
+
 ## 0.1.11
 
 - **Forms in the visitor's language (`pixiformui/translate`):** `translateConfig(config, { url })` translates every

@@ -44,6 +44,7 @@ reference server. This guide covers everything you need to build, style, extend,
 31. [Server-side rendering (Next.js, Remix, Astro…)](#31-server-side-rendering-nextjs-remix-astro)
 32. [Encrypted file uploads](#32-encrypted-file-uploads)
 33. [Forms in the visitor's language](#33-forms-in-the-visitors-language)
+34. [Multi-step forms](#34-multi-step-forms)
 
 ---
 
@@ -2842,4 +2843,47 @@ mountPixiForm(host, await translateConfig(config, { url: 'https://cloud.pixiform
 - **Not translated yet:** the library's own built-in messages (for example "Enter a valid email", "nothing
   selected" in the accessibility outline, and the human-check prompt) and right-to-left layout. Set your own
   messages through `requiredMessage`, validators and `helperText` where it matters.
+
+---
+
+## 34. Multi-step forms
+
+Long forms (applications, onboarding, claims, KYC, exams) read better one screen at a time. Use `steps` instead of
+`fields`: each step is a screen with its own title and fields, under a progress bar ("Step 2 of 4").
+
+```ts
+mountPixiForm(host, {
+  title: 'Open an account',
+  submitText: 'Open account',
+  onSubmit: async (values) => save(values), // every step's values, submitted once at the end
+  steps: [
+    { title: 'About you', description: 'Who is opening the account.', fields: [
+      { type: 'text', name: 'fullName', label: 'Full name', required: true },
+      { type: 'radio', name: 'kind', label: 'Account type', value: 'personal', options: [
+        { value: 'personal', label: 'Personal' }, { value: 'business', label: 'Business' }] },
+    ] },
+    { title: 'Your business', showIf: { field: 'kind', equals: 'business' }, fields: [
+      { type: 'text', name: 'company', label: 'Company name', required: true },
+    ] },
+    { title: 'Contact', fields: [{ type: 'email', name: 'email', label: 'Email', required: true }] },
+  ],
+});
+```
+
+- **Next** checks only the current step and moves on; **Back** keeps everything typed. The last step shows
+  **Submit**, which validates every step and sends **one** submission with all the values (`action`, `onSubmit`,
+  encryption, proof-of-work and duplicate protection work exactly as for a single screen).
+- **Enter** on a step's last field acts as Next.
+- **Conditional steps:** `showIf` on a step skips it (its fields aren't validated or submitted, and the progress
+  counts change), using the same conditions as fields ([§30](#30-conditional-and-hidden-fields)). Fields inside a
+  step can have their own `showIf` too.
+- **A problem on another step:** if submitting finds one (for example a value changed from code), the form goes
+  back to that step and focuses the field.
+- **Accessibility:** only the current step is in the outline and the Tab order; the step heading ("Step 2 of 4:
+  Contact") is announced and focus moves to its first field.
+- **Texts:** `nextText` (default 'Next'), `backText` ('Back') and `stepLabel` ('Step {n} of {total}').
+  `translateConfig()` translates them along with the steps' titles and fields.
+- **From code:** `handle.currentStep` (index among the steps shown), `handle.goToStep(index)`, and the `step`
+  event (`{ index, count, title }`), e.g. to save a draft after each step.
+- **Server-side rendering:** `pixiformSkeleton()` shows the first step and a Next button.
 

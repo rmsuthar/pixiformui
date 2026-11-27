@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Forms in the visitor's language (`pixiformui/translate`):** `translateConfig(config, { url })` translates every
+  visible text of a config (labels, help, options, headings, buttons, "is required" messages) into the browser's
+  language through an endpoint or your own function, and falls back to the original on any problem. Only form texts
+  are sent, never visitors' answers. 1.6 KB; also in the standalone scripts. PixiForm Cloud offers a cached endpoint.
+
 ## 0.1.10
 
 - **Encrypted file uploads (`pixiformui/file`):** `fileField({ name, label, accept, maxSize, maxFiles })` adds a

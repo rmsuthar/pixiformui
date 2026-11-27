@@ -43,6 +43,7 @@ reference server. This guide covers everything you need to build, style, extend,
 30. [Conditional and hidden fields](#30-conditional-and-hidden-fields)
 31. [Server-side rendering (Next.js, Remix, Astro…)](#31-server-side-rendering-nextjs-remix-astro)
 32. [Encrypted file uploads](#32-encrypted-file-uploads)
+33. [Forms in the visitor's language](#33-forms-in-the-visitors-language)
 
 ---
 
@@ -2804,4 +2805,41 @@ onSubmit: async (_values, form) => {
 Files are always encrypted: `serialize()` refuses a form with files when there's no `encryptionKey` or no `upload`.
 Server support in the reference server and `create-pixiformui` is coming next, and PixiForm Cloud will store
 encrypted files for paid plans.
+
+---
+
+## 33. Forms in the visitor's language
+
+`translateConfig()` (from `pixiformui/translate`, about 1.6 KB, also included in the standalone scripts) returns a copy
+of your config in the visitor's language. It collects every text people read: the title and subtitle, labels,
+placeholders, help, tooltips, options, group titles, headings, paragraphs, buttons and "is required" messages. It
+then asks a translation endpoint for the browser's preferred language, and swaps them in.
+
+```ts
+import { mountPixiForm } from 'pixiformui';
+import { translateConfig } from 'pixiformui/translate';
+
+const config = { title: 'Apply', fields: [/* … */], onSubmit };
+mountPixiForm(host, await translateConfig(config, { url: 'https://cloud.pixiformui.lets.gen.in/f/<formId>/translate' }));
+```
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `url` | | An endpoint: `POST { source, target, strings }` → `{ translations }` (same order). PixiForm Cloud provides one per form. |
+| `translate` | | Or your own function: `(strings, target, source) => Promise<string[]>`, for DeepL, Google, a fixed table… |
+| `target` | the browser's language | A BCP 47 tag such as `'hi'`, `'fr-CA'` or `'pt-BR'`. Pass your site's language switcher value here. |
+| `source` | `'en'` | The language your config is written in. |
+| `timeoutMs` | 4000 | After this the form shows in the original language. |
+
+- **Only your form's texts are sent**, never anything visitors type. Field names and values stay as they are, so
+  your server code doesn't change.
+- **It never blocks the form.** Same language, an unknown tag, a slow or failed endpoint, or a missing translation:
+  the original text is used.
+- **The default "Full name is required."** is translated as a template (`{label} is required.`) and filled with the
+  translated label. A translation that drops `{label}` is ignored.
+- **PixiForm Cloud** translates with Workers AI and caches each text per language, so a form is translated once and
+  then served from the cache. A form can add a limited number of new texts per day.
+- **Not translated yet:** the library's own built-in messages (for example "Enter a valid email", "nothing
+  selected" in the accessibility outline, and the human-check prompt) and right-to-left layout. Set your own
+  messages through `requiredMessage`, validators and `helperText` where it matters.
 

@@ -8,12 +8,14 @@ import { resolve } from 'node:path';
  *   dist-lib/pixiformui-ssr.js         pixiformui/ssr: server-rendered placeholder (no DOM needed)
  *   dist-lib/pixiformui-file.js        pixiformui/file: encrypted file uploads; imports the core from 'pixiformui'
  *   dist-lib/pixiformui-file.standalone.js  standalone + file uploads, for plain HTML (one script)
+ *   dist-lib/pixiformui-translate.js   pixiformui/translate: show a form in the visitor's language (no dependencies)
  */
 export default defineConfig(({ mode }) => {
   const standaloneFile = mode === 'standalone-file';
   const standalone = mode === 'standalone' || standaloneFile;
   const ssr = mode === 'ssr';
   const file = mode === 'file';
+  const translate = mode === 'translate';
   // pixiformui/file shares the app's copy of the core (one Control class, one renderer).
   const isCore = (id: string) => id === '../index' || /[\\/]src[\\/]lib[\\/]index(\.ts)?$/.test(id);
   return {
@@ -26,9 +28,9 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       minify: standalone ? 'terser' : false,
       lib: {
-        entry: resolve(__dirname, file ? 'src/lib/file/index.ts' : ssr ? 'src/lib/ssr.ts' : standaloneFile ? 'src/lib/standalone-file.ts' : standalone ? 'src/lib/standalone.ts' : 'src/lib/index.ts'),
+        entry: resolve(__dirname, translate ? 'src/lib/translate.ts' : file ? 'src/lib/file/index.ts' : ssr ? 'src/lib/ssr.ts' : standaloneFile ? 'src/lib/standalone-file.ts' : standalone ? 'src/lib/standalone.ts' : 'src/lib/index.ts'),
         formats: ['es'],
-        fileName: () => (file ? 'pixiformui-file.js' : ssr ? 'pixiformui-ssr.js' : standaloneFile ? 'pixiformui-file.standalone.js' : standalone ? 'pixiformui.standalone.js' : 'pixiformui.js'),
+        fileName: () => (translate ? 'pixiformui-translate.js' : file ? 'pixiformui-file.js' : ssr ? 'pixiformui-ssr.js' : standaloneFile ? 'pixiformui-file.standalone.js' : standalone ? 'pixiformui.standalone.js' : 'pixiformui.js'),
       },
       rollupOptions: {
         output: { inlineDynamicImports: true },

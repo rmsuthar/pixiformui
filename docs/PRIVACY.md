@@ -79,6 +79,9 @@ emails, or write to us.
 - **Encrypted files** (Starter and Pro) are encrypted in the visitor's browser to your key, including their names,
   and stored as ciphertext in Cloudflare R2. They are deleted with their submission, with the form, by retention, or
   after two hours if they were never attached to a submission.
+- **Translated forms** (optional): if your page asks for it, your form's own texts (labels, help, options, never
+  visitors' answers) are translated into each visitor's browser language by Cloudflare Workers AI and cached for 90
+  days. The request reveals the visitor's preferred language; their IP is used only as a salted hash for rate limits.
 - **Ask your inbox** (optional): when you ask a question about submissions, your browser decrypts the submissions you
   have loaded and sends their text (never password fields or files) to Cloudflare Workers AI to answer that one
   question. Neither we nor the feature store the text or the answer, and we don't log them; only a monthly count of

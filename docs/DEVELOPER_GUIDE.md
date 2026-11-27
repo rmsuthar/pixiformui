@@ -2936,6 +2936,39 @@ JSON string: `{ timeTakenMs, focusLost, marked: ['q2'], timedOut }`. Unanswered 
 - **Focus loss is a signal, not proof.** `focusLost` counts the times the window lost focus (another tab or app);
   decide in your own rules what it means.
 
-`exam.remainingMs`, `exam.marked`, `exam.focusLost` and `exam.handle` (the usual form handle) are available from
-code. The core gained `allowBack`, a `header` slot, `form.lock()` and `form.submit({ skipValidation })` for this.
+### Exam rules and the integrity log
+
+Every exam keeps an **integrity log** in `examReport.integrity`: each event with its reason, when it happened
+(milliseconds after the start) and, for departures, how long the candidate was away. Never any content: a paste
+is logged with its length, not its text.
+
+```ts
+await mountExam(host, config, {
+  questions,
+  integrity: { requireFullscreen: true, blockPaste: true, maxViolations: 3 },
+  onViolation: (type, count) => console.log(type, count),
+});
+// examReport.integrity → { violations: 3, counts: { 'tab-hidden': 2, paste: 1, 'typing-burst': 1 },
+//                          events: [{ type: 'tab-hidden', at: 41200, ms: 5300 }, …] }
+```
+
+| Event | Kind | Detected when |
+| --- | --- | --- |
+| `tab-hidden` | rule break | the exam tab is hidden (another tab), with how long |
+| `window-blur` | rule break | another window or app is used for more than a moment, with how long |
+| `fullscreen-exit` | rule break | the candidate leaves full screen (`requireFullscreen`, asked for on the first interaction) |
+| `paste` | rule break | text is pasted into an answer (blocked with `blockPaste`) |
+| `typing-burst` | signal | 40+ characters appear in an open answer at once (an auto-typer, or pasting another way) |
+| `resize` | signal | the window becomes much narrower than the screen (for example, side by side with a chatbot) |
+| `extended-display` | signal | a second screen is connected (Chromium only) |
+| `devtools-shortcut`, `print`, `context-menu` | signal | developer-tool or print shortcuts, printing, right-click |
+
+Rule breaks show the candidate a warning ("You left the exam tab. 2 of 3 allowed."; turn off with `warn: false`)
+and count towards `maxViolations`, which submits the answers and locks the exam (`endedBy: 'violations'`).
+
+**What browsers can't detect:** screenshots, a phone or second device, someone in the room, or a chatbot used on
+another device. Treat the log as signals for your own rules, never as proof on its own.
+
+`exam.remainingMs`, `exam.marked`, `exam.focusLost`, `exam.violations`, `exam.integrity` and `exam.handle` (the
+usual form handle) are available from code. The core gained `allowBack`, a `header` slot, `form.lock()` and `form.submit({ skipValidation })` for this.
 

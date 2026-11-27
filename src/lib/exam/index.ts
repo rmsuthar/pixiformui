@@ -14,7 +14,8 @@
  * Built on multi-step forms: a countdown, a question navigator (answered / current / marked for review),
  * "Mark for review", optional no-going-back and shuffling, a warning before finishing with unanswered
  * questions, automatic submission when time is up, and focus-loss counting. The submission carries every
- * answer plus `examReport` (time taken, focus losses, marked questions, whether time ran out).
+ * answer plus `examReport` (time taken, marked questions, how it ended, and an integrity log of rule breaks and
+ * signals with their times: leaving the tab or window, leaving full screen, pasting, typing bursts…).
  *
  * Correct answers never belong in the browser: score on your server (option values stay the same when
  * options are shuffled). Questions are drawn on the canvas, so they aren't in the page's HTML, though screen
@@ -49,7 +50,37 @@ export interface ExamOptions {
   onTimeUp?: () => void;
   /** The window lost focus (another tab or app). */
   onFocusLost?: (count: number) => void;
+  /** Exam rules, all optional. Every event is logged in `examReport.integrity` either way. */
+  integrity?: {
+    /** Ask for full screen at the start and log each exit as a rule break. */
+    requireFullscreen?: boolean;
+    /** Block pasting into answers (it's logged either way). */
+    blockPaste?: boolean;
+    /** Submit automatically after this many rule breaks (leaving the page, leaving full screen, pasting). */
+    maxViolations?: number;
+    /** Tell the candidate when a rule break is recorded. Default true. */
+    warn?: boolean;
+  };
+  /** A rule break was recorded. */
+  onViolation?: (type: IntegrityEventType, count: number) => void;
 }
+
+/**
+ * What the integrity log records. Rule breaks: tab-hidden, window-blur, fullscreen-exit, paste.
+ * Signals (logged only): typing-burst, resize (a narrow, split-screen window), extended-display (a second
+ * screen, Chromium only), devtools-shortcut, print, context-menu. Screenshots can't be detected by browsers.
+ */
+export type IntegrityEventType = 'tab-hidden' | 'window-blur' | 'fullscreen-exit' | 'paste' | 'typing-burst' | 'resize' | 'extended-display' | 'devtools-shortcut' | 'print' | 'context-menu';
+export interface IntegrityEvent {
+  type: IntegrityEventType;
+  /** Milliseconds after the exam started. */
+  at: number;
+  /** How long the candidate was away (leaving events). */
+  ms?: number;
+  /** Characters pasted or inserted at once (never the text). */
+  size?: number;
+}
+const VIOLATIONS = new Set<IntegrityEventType>(['tab-hidden', 'window-blur', 'fullscreen-exit', 'paste']);
 
 export interface Exam {
   readonly handle: PixiFormHandle;
@@ -57,6 +88,9 @@ export interface Exam {
   readonly remainingMs: number;
   readonly marked: string[];
   readonly focusLost: number;
+  /** Rule breaks so far. */
+  readonly violations: number;
+  readonly integrity: { violations: number; counts: Partial<Record<IntegrityEventType, number>>; events: IntegrityEvent[] };
 }
 
 /** Fisher–Yates with crypto randomness. */
@@ -327,10 +361,36 @@ export async function mountExam(host: HTMLElement, base: Omit<PixiFormConfig, 'f
       handle.toast(`${open} question${open === 1 ? ' is' : 's are'} unanswered. Press “${base.submitText ?? 'Finish exam'}” again to submit anyway.`, 'info');
     }
   });
-  // The report travels with the answers.
-  handle.form.on('submitstart', () => {
-    handle.get('examReport')?.setValue(JSON.stringify({ timeTakenMs: Date.now() - startedAt, focusLost, marked: [...marked], timedOut }), false);
-  });
+  // ---- integrity log: what happened, why it counts, when and for how long (never any content)
+  const opts = exam.integrity ?? {};
+  const events: IntegrityEvent[] = [];
+  const counts: Partial<Record<IntegrityEventType, number>> = {};
+  let violations = 0;
+  let endedBy: 'candidate' | 'time' | 'violations' = 'candidate';
+  const record = (type: IntegrityEventType, extra: { ms?: number; size?: number } = {}) => {
+    counts[type] = (counts[type] ?? 0) + 1;
+    if (events.length < 200) events.push({ type, at: Date.now() - startedAt, ...extra });
+    if (!VIOLATIONS.has(type)) return;
+    violations++;
+    exam.onViolation?.(type, violations);
+    if (timedOut || handle.form.locked) return;
+    const max = opts.maxViolations;
+    if (max && violations >= max) return void finishEarly();
+    if (opts.warn !== false) {
+      const what = { 'tab-hidden': 'You left the exam tab', 'window-blur': 'You left the exam window', 'fullscreen-exit': 'You left full screen', paste: opts.blockPaste ? 'Pasting isn’t allowed' : 'Pasting was recorded' }[type as 'paste'];
+      handle.toast(`${what}. ${max ? `${violations} of ${max} allowed.` : 'This is recorded in your report.'}`, 'error');
+    }
+  };
+  const finishEarly = async () => {
+    endedBy = 'violations';
+    timedOut = true; // skip the unanswered question warning
+    clearInterval(timer);
+    handle.toast('Too many rule breaks: submitting your answers now.', 'error');
+    const result = await handle.form.submit({ skipValidation: true });
+    if (result?.ok !== false) handle.form.lock();
+  };
+  const report = () => ({ timeTakenMs: Date.now() - startedAt, focusLost, marked: [...marked], timedOut: endedBy === 'time', endedBy, integrity: { violations, counts, events } });
+  handle.form.on('submitstart', () => handle.get('examReport')?.setValue(JSON.stringify(report()), false));
 
   // Countdown: announced at 5 and 1 minutes; at zero the answers are submitted and the form locks.
   let timer = 0;
@@ -344,9 +404,10 @@ export async function mountExam(host: HTMLElement, base: Omit<PixiFormConfig, 'f
         handle.ui.announcer.announce(`${m} minute${m === 1 ? '' : 's'} left.`, true);
       }
     }
-    if (left > 0) return;
+    if (left > 0 || timedOut) return;
     clearInterval(timer);
     timedOut = true;
+    endedBy = 'time';
     handle.toast('Time is up. Submitting your answers…', 'info');
     const result = await handle.form.submit({ skipValidation: true });
     if (result?.ok !== false) handle.form.lock();
@@ -357,21 +418,118 @@ export async function mountExam(host: HTMLElement, base: Omit<PixiFormConfig, 'f
     timer = setInterval(() => void tick(), 1000) as unknown as number;
   }
 
-  // Leaving the page (another tab or app) is counted, for your proctoring rules.
-  let lastLoss = 0;
-  const lost = () => {
-    if (Date.now() - lastLoss < 1000) return;
-    lastLoss = Date.now();
+  // Leaving: another tab (hidden) or another window or app (blur). One departure = one event, with its length.
+  let away: { since: number; hidden: boolean; logged: boolean } | null = null;
+  let pending = 0;
+  const lastLeave = () => [...events].reverse().find((e) => e.type === 'tab-hidden' || e.type === 'window-blur');
+  const log = (hidden: boolean) => {
+    if (!away || away.logged) return;
+    away.logged = true;
     focusLost++;
     exam.onFocusLost?.(focusLost);
+    record(hidden ? 'tab-hidden' : 'window-blur');
   };
-  const onVisibility = () => document.visibilityState === 'hidden' && lost();
-  window.addEventListener('blur', lost);
+  const leave = (hidden: boolean) => {
+    if (!away) away = { since: Date.now(), hidden, logged: false };
+    if (hidden) {
+      // Switching tabs fires blur, then hidden: one departure, logged as a tab switch.
+      clearTimeout(pending);
+      away.hidden = true;
+      if (!away.logged) log(true);
+      else {
+        const last = lastLeave();
+        if (last?.type === 'window-blur') {
+          last.type = 'tab-hidden';
+          counts['window-blur'] = (counts['window-blur'] ?? 1) - 1;
+          counts['tab-hidden'] = (counts['tab-hidden'] ?? 0) + 1;
+        }
+      }
+    } else if (!away.logged) {
+      // Another window or app: logged if it lasts (blips such as the browser's own menus are ignored).
+      clearTimeout(pending);
+      pending = setTimeout(() => log(false), 250) as unknown as number;
+    }
+  };
+  const back = () => {
+    clearTimeout(pending);
+    if (!away) return;
+    const last = away.logged ? lastLeave() : null;
+    if (last) last.ms = Date.now() - away.since;
+    away = null;
+  };
+  const onBlur = () => leave(false);
+  const onVisibility = () => (document.visibilityState === 'hidden' ? leave(true) : back());
+  const onFocus = () => back();
+
+  // Full screen (optional): asked for on the first interaction (browsers need a gesture), again after leaving.
+  let wasFullscreen = false;
+  const askFullscreen = () => {
+    if (!opts.requireFullscreen || document.fullscreenElement || handle.form.locked) return;
+    void document.documentElement.requestFullscreen?.().catch(() => undefined);
+  };
+  const onFullscreen = () => {
+    if (document.fullscreenElement) wasFullscreen = true;
+    else if (wasFullscreen && !handle.form.locked) record('fullscreen-exit');
+  };
+  const host_ = handle.ui.app.canvas.parentElement;
+  const offInteraction = handle.ui.onInteraction(() => askFullscreen());
+
+  // Pasting into an answer: recorded (its length only), or blocked. Capture runs before the field sees it.
+  const onPaste = (e: ClipboardEvent) => {
+    if (!e.isTrusted) return; // only real pastes by the candidate
+    record('paste', { size: e.clipboardData?.getData('text').length ?? 0 });
+    if (opts.blockPaste) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  // Text appearing in a burst (an auto-typer or pasted some other way) in open answers.
+  const lastText = new Map<string, { len: number; at: number }>();
+  handle.on('change', ({ name, value }) => {
+    if (typeof value !== 'string' || !qs.some((q) => q.id === name)) return;
+    const prev = lastText.get(name) ?? { len: 0, at: Date.now() };
+    if (value.length - prev.len >= 40 && Date.now() - prev.at < 500) record('typing-burst', { size: value.length - prev.len });
+    lastText.set(name, { len: value.length, at: Date.now() });
+  });
+  // Signals (recorded, not counted as rule breaks): a narrow window (split screen), a second screen,
+  // developer-tool or print shortcuts, printing, the context menu.
+  let narrow = false;
+  const onResize = () => {
+    const now = window.innerWidth < (screen.availWidth || window.innerWidth) * 0.7;
+    if (now && !narrow) record('resize');
+    narrow = now;
+  };
+  if ((screen as unknown as { isExtended?: boolean }).isExtended) record('extended-display');
+  const onKey = (e: KeyboardEvent) => {
+    const k = e.key.toLowerCase();
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.key === 'F12' || (mod && e.shiftKey && ['i', 'j', 'c'].includes(k)) || (mod && k === 'u')) record('devtools-shortcut');
+    else if (mod && k === 'p') record('print');
+  };
+  const onPrint = () => record('print');
+  const onMenu = () => record('context-menu');
+  window.addEventListener('blur', onBlur);
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('keydown', onKey, true);
+  window.addEventListener('beforeprint', onPrint);
   document.addEventListener('visibilitychange', onVisibility);
+  document.addEventListener('fullscreenchange', onFullscreen);
+  host_?.addEventListener('paste', onPaste, true);
+  host_?.addEventListener('contextmenu', onMenu);
   handle.on('destroy', () => {
     clearInterval(timer);
-    window.removeEventListener('blur', lost);
+    clearTimeout(pending);
+    offInteraction();
+    window.removeEventListener('blur', onBlur);
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('keydown', onKey, true);
+    window.removeEventListener('beforeprint', onPrint);
     document.removeEventListener('visibilitychange', onVisibility);
+    document.removeEventListener('fullscreenchange', onFullscreen);
+    host_?.removeEventListener('paste', onPaste, true);
+    host_?.removeEventListener('contextmenu', onMenu);
   });
 
   return {
@@ -384,6 +542,12 @@ export async function mountExam(host: HTMLElement, base: Omit<PixiFormConfig, 'f
     },
     get focusLost() {
       return focusLost;
+    },
+    get violations() {
+      return violations;
+    },
+    get integrity() {
+      return { violations, counts: { ...counts }, events: events.map((e) => ({ ...e })) };
     },
   };
 }

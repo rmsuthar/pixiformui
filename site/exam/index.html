@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exam demo: a timed quiz in PixiFormUI</title>
+    <meta name="description" content="Try a timed quiz built with PixiFormUI: one question per screen, a countdown, a question navigator and mark for review. Questions are drawn on a canvas, and the answer key stays on the server." />
+    <link rel="canonical" href="https://pixiformui.lets.gen.in/exam/" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PixiFormUI" />
+    <meta property="og:title" content="Exam demo: a timed quiz in PixiFormUI" />
+    <meta property="og:description" content="One question per screen, a countdown, a question navigator, mark for review, and an answer key that never reaches the browser." />
+    <meta property="og:url" content="https://pixiformui.lets.gen.in/exam/" />
+    <meta property="og:image" content="https://pixiformui.lets.gen.in/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="alternate" type="application/atom+xml" title="PixiFormUI releases" href="/releases/feed.xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+    <script src="/js/menu.js" defer></script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://pixiformui.lets.gen.in/"},{"@type":"ListItem","position":2,"name":"Exam demo","item":"https://pixiformui.lets.gen.in/exam/"}]}</script>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="/" aria-label="PixiFormUI home">
+          <img src="/favicon.svg" alt="" width="28" height="28" />
+          <span>PixiForm<b>UI</b></span>
+        </a>
+        <a class="version" href="/releases/" title="Release notes" aria-label="Version __PIXIFORM_VERSION__: release notes">v__PIXIFORM_VERSION__</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" hidden>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg>
+        </button>
+        <nav id="site-nav" aria-label="Main">
+          <a href="/#features">Features</a>
+          <a href="/#demo">Demo</a>
+          <a href="/playground/">Playground</a>
+          <a href="/pro/">Pro</a>
+          <a href="/docs/install/">Install</a>
+          <a href="/docs/">Docs</a>
+          <a href="/#contact">Contact</a>
+          <a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="exam-page">
+      <section class="section">
+        <div class="wrap">
+          <h1>Exam demo</h1>
+          <p class="section-lead">A five-question timed quiz built with <code>pixiformui/exam</code>: one question per screen, a countdown, a question navigator, mark for review, and a warning before you finish with questions unanswered. The questions are drawn on a canvas, not written into this page, and <strong>the answer key stays on our server</strong>: finish to see what your server would receive and the score it sends back.</p>
+          <div class="exam-grid">
+            <div id="exam" class="form-host exam-host"></div>
+            <aside class="exam-side">
+              <div class="card">
+                <h2>What your server receives</h2>
+                <pre id="exam-payload"><code>// finish the quiz…</code></pre>
+                <p id="exam-score" class="exam-score" role="status" aria-live="polite"></p>
+                <button type="button" class="btn" id="exam-again" hidden>Try again</button>
+              </div>
+              <div class="card">
+                <h2>Things to try</h2>
+                <ul class="exam-tips">
+                  <li>Switch to another tab and back: the report counts it.</li>
+                  <li>Mark a question for review, then jump with the numbered squares (or the arrow keys).</li>
+                  <li>Finish with a question unanswered: you're asked once.</li>
+                  <li>Let the timer run out: your answers are sent and the form locks.</li>
+                  <li>Open the ⤢ button for a distraction-free view.</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h2>The code</h2>
+                <pre><code>import { mountExam } from 'pixiformui/exam';
+
+await mountExam(host, { title: 'Space quiz', action: '/api/answers' }, {
+  timeLimit: 3 * 60,
+  shuffleOptions: true,
+  questions: [
+    { id: 'q1', text: 'Which planet is the largest?',
+      options: ['Earth', 'Jupiter', 'Mars'] },
+    { id: 'q5', text: 'Why do we have seasons?', answer: 'long' },
+  ],
+});</code></pre>
+                <p class="muted"><a href="/docs/guide/exams-and-quizzes/">Exams and quizzes in the guide →</a> · Hosted quizzes with candidate links and scores: <a href="https://cloud.pixiformui.lets.gen.in/">PixiForm Cloud</a></p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>© 2026 PixiFormUI</span>
+        <nav aria-label="Footer">
+          <a href="/docs/guide/">Guide</a>
+          <a href="/releases/">Releases</a>
+          <a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="mailto:ravindra.suthar@me.com">ravindra.suthar@me.com</a><a href="https://www.linkedin.com/in/ravindrasuthar/" rel="me noopener noreferrer">LinkedIn</a><a href="https://github.com/rmsuthar/pixiformui" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

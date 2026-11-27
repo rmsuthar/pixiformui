@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.15
+
+- **Exam integrity log:** `examReport.integrity` records rule breaks (leaving the tab or window, with how long;
+  leaving full screen; pasting) and signals (typing bursts, a narrow window, a second screen, developer-tool and
+  print shortcuts, right-click) with times, never content. Options: `requireFullscreen`, `blockPaste`,
+  `maxViolations` (submits and locks at the limit), `warn`; `onViolation`, `exam.violations`, `exam.integrity`.
+  Brief focus blips are ignored. `examReport.endedBy`: candidate, time or violations.
+- **Website:** an exam demo at `/exam/`, scored by the server, which holds the answer key.
+
 ## 0.1.14
 
 - **Exams:** on narrow screens the timer and "Mark for review" stack instead of overlapping.

@@ -1371,3 +1371,52 @@ h1 {
   .pg-ai-row { flex-direction: column; }
   .pg-ai-actions { flex-direction: row; flex-wrap: wrap; }
 }
+/* ------------------------------------------------------------------ exam demo */
+.exam-page h1 {
+  margin: 0 0 8px;
+}
+.exam-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 24px;
+}
+.exam-host {
+  min-width: 0;
+}
+.exam-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.exam-side h2 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+.exam-side .card {
+  min-width: 0;
+}
+.exam-side pre {
+  max-height: 320px;
+  font-size: 12.5px;
+  /* The report is one long line: wrap it instead of widening the page. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.exam-score {
+  font-weight: 700;
+  margin: 12px 0;
+}
+.exam-tips {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+@media (max-width: 900px) {
+  .exam-grid {
+    grid-template-columns: 1fr;
+  }
+}

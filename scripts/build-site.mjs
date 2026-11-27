@@ -350,7 +350,7 @@ ${olderHtml}
 });
 console.log(`install page + /v/${version}/ downloads`);
 // Header version badge on the Vite-built pages (home, 404).
-for (const f of ['index.html', '404.html', 'playground/index.html', 'pro/index.html']) {
+for (const f of ['index.html', '404.html', 'playground/index.html', 'pro/index.html', 'exam/index.html']) {
   const file = join(out, f);
   // The size quoted on the home page is measured from the standalone bundle on every build.
   writeFileSync(file, readFileSync(file, 'utf8').replaceAll('__PIXIFORM_VERSION__', version).replaceAll('__PIXIFORM_SIZE_KB__', String(standalone.kb)));
@@ -614,7 +614,7 @@ writeFileSync(
 );
 
 // ------------------------------------------------------------------ sitemap + robots
-const urls = ['/', '/playground/', '/pro/', ...pages.map((p) => p.url)];
+const urls = ['/', '/playground/', '/pro/', '/exam/', ...pages.map((p) => p.url)];
 writeFileSync(
   join(out, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>

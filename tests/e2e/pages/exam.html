@@ -8,7 +8,8 @@
   <body>
     <div id="f"></div>
     <script type="module">
-      // Test page for tests/e2e/exam.spec.ts. ?seconds=N sets a time limit, ?noback disallows going back.
+      // Test page for tests/e2e/exam.spec.ts. ?seconds=N sets a time limit, ?noback disallows going back,
+      // ?rules blocks pasting and submits after 3 rule breaks.
       import { mountExam } from '/src/lib/exam/index.ts';
       const q = new URLSearchParams(location.search);
       window.__submitted = null;
@@ -16,11 +17,14 @@
       window.__exam = await mountExam(document.getElementById('f'), {
         title: 'Astronomy quiz',
         form: { botGuard: false, rateLimit: false },
+        // The simulated departures in the ?rules test aren't real focus changes, so no privacy screen there.
+        privacyScreen: !q.has('rules'),
         onSubmit: async (values) => ((window.__submitted = values), { ok: true, message: 'Answers received.' }),
       }, {
         timeLimit: Number(q.get('seconds') ?? 600),
         allowBack: !q.has('noback'),
         onTimeUp: () => (window.__timeUp = true),
+        integrity: q.has('rules') ? { blockPaste: true, maxViolations: 3 } : undefined,
         questions: [
           { id: 'q1', text: 'Which planet is the largest?', options: ['Earth', 'Jupiter', 'Mars'] },
           { id: 'q2', text: 'Which is closest to the Sun?', options: ['Mercury', 'Venus', 'Neptune'] },

@@ -71,3 +71,54 @@ test('exam: when time is up the answers are submitted and the form locks', async
   expect(JSON.parse(v.examReport).timedOut).toBe(true);
   expect(await page.evaluate(() => (window as any).__exam.handle.form.locked)).toBe(true);
 });
+
+/** Simulates leaving the page (another tab) and coming back, as the browser reports it. */
+async function leaveAndReturn(page: Page, awayMs = 50) {
+  await page.evaluate(async (ms) => {
+    const set = (v: string) => Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
+    window.dispatchEvent(new Event('blur'));
+    set('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await new Promise((r) => setTimeout(r, ms));
+    set('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+  }, awayMs);
+}
+
+test('exam integrity: rule breaks are logged with reasons and times, warned, and end the exam at the limit', async ({ page, browserName, context }) => {
+  await page.goto('/tests/e2e/pages/exam.html?rules');
+  await focusField(page, 'Your answer');
+  await page.keyboard.press('ArrowDown'); // q1 = 'b'
+
+  // 1. Left the tab for a while: one rule break, its length recorded, a warning.
+  await leaveAndReturn(page, 300);
+  await expect(page.locator('body').getByText('You left the exam tab. 1 of 3 allowed.').first()).toBeAttached();
+
+  // 2. Pasting is blocked (and counted); a burst of text is a signal, not a rule break.
+  await page.evaluate(() => (window as any).__exam.handle.goToStep(3));
+  await expect(heading(page)).toHaveText(/^Question 4 of 4/); // the outline has moved to the new question
+  await focusField(page, 'Your answer');
+  if (browserName === 'chromium') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.evaluate(() => navigator.clipboard.writeText('An answer pasted from a chatbot.'));
+    await page.keyboard.press('ControlOrMeta+V');
+    await expect(page.locator('body').getByText('Pasting isn’t allowed. 2 of 3 allowed.').first()).toBeAttached();
+    expect(await page.evaluate(() => (window as any).__exam.handle.values().q4)).toBe('');
+  } else await leaveAndReturn(page); // the second rule break another way
+  await page.evaluate(() => (window as any).__exam.handle.get('q4').setValue('x'.repeat(60)));
+
+  // 3. The third rule break submits the answers and locks the exam.
+  await leaveAndReturn(page);
+  await expect.poll(() => page.evaluate(() => (window as any).__submitted)).not.toBeNull();
+  expect(await page.evaluate(() => (window as any).__exam.handle.form.locked)).toBe(true);
+  const report = JSON.parse((await page.evaluate(() => (window as any).__submitted)).examReport);
+  expect(report.endedBy).toBe('violations');
+  expect(report.integrity.violations).toBe(3);
+  expect(report.integrity.counts).toEqual(browserName === 'chromium' ? { 'tab-hidden': 2, paste: 1, 'typing-burst': 1 } : { 'tab-hidden': 3, 'typing-burst': 1 });
+  const first = report.integrity.events[0];
+  expect(first.type).toBe('tab-hidden');
+  expect(first.ms).toBeGreaterThanOrEqual(250);
+  if (browserName === 'chromium') expect(report.integrity.events.find((e: { type: string }) => e.type === 'paste').size).toBe(32);
+  expect(JSON.stringify(report)).not.toContain('chatbot'); // never the pasted text
+});

@@ -5,6 +5,7 @@
  *   GET  /api/waitlist/session  → { pow: { challenge, difficulty } }   (no cookies, no state)
  *   POST /api/waitlist          → { ok, message?, fieldErrors? }        (the Pro & Cloud waitlist)
  *   POST /api/generate-form     → { ok, config }                        (describe a form: site/form-builder.ts)
+ *   POST /api/exam-demo         → { score, max }                        (the /exam/ demo's answer key lives here)
  *
  * Abuse protection without sessions: the proof-of-work challenge is signed (HMAC) and carries its
  * issue time, so the Worker can check it, enforce a minimum fill time, and refuse reuse (KV, TTL).
@@ -205,6 +206,21 @@ async function join(req: Request, env: Env, ctx: Ctx): Promise<Response> {
   });
 }
 
+/** The /exam/ demo's answer key: on the server, never in the page (as a real exam should be). */
+const EXAM_KEY: Record<string, string> = { q1: 'b', q2: 'a', q3: 'c', q4: 'b' };
+function examDemo(text: string, req: Request): Response {
+  if (req.method !== 'POST') return json(405, { message: 'Method not allowed.' });
+  if (text.length > 16 * 1024) return json(413, { message: 'Too large.' });
+  let answers: Record<string, unknown> = {};
+  try {
+    answers = (JSON.parse(text) as { answers?: Record<string, unknown> }).answers ?? {};
+  } catch {
+    return json(400, { message: 'Invalid JSON.' });
+  }
+  const keys = Object.keys(EXAM_KEY);
+  return json(200, { score: keys.filter((k) => answers[k] === EXAM_KEY[k]).length, max: keys.length });
+}
+
 export default {
   async fetch(req: Request, env: Env, ctx: Ctx = { waitUntil: () => {} }): Promise<Response> {
     const path = new URL(req.url).pathname;
@@ -216,6 +232,7 @@ export default {
       if (path === '/api/waitlist/session') return await session(env);
       if (path === '/api/waitlist') return await join(req, env, ctx);
       if (path === '/api/generate-form') return await generateForm(req, env);
+      if (path === '/api/exam-demo') return examDemo(await req.text(), req);
       if (path.startsWith('/api/')) return json(404, { message: 'Not found.' });
     } catch (err) {
       console.error('waitlist error', err);

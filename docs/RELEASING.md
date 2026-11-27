@@ -36,7 +36,9 @@ npm version patch --no-git-tag-version      # or minor / major
 # 2. Check everything locally
 npm run typecheck && npm test && npm run test:e2e
 # 3. Commit, tag and push: the Release workflow publishes both packages and creates the GitHub release
-git commit -am "Release vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags
+git commit -am "Release vX.Y.Z" && git tag vX.Y.Z
+git push && git push origin vX.Y.Z           # push the tag by name: --follow-tags skips plain tags
+# 3b. Watch it: both "Publish" steps should succeed (gh run watch, or the Actions tab)
 # 4. Publish the website (the install page switches to the new version once it's on npm)
 npm run deploy:site
 # 5. Check the starter works from npm (a fresh cache avoids stale 404s)
@@ -48,7 +50,15 @@ After publishing, jsDelivr and unpkg serve the package automatically:
 
 ## Notes
 
-- `npm run deploy:site` also notifies IndexNow (Bing, Yandex, Naver, Seznam…) about every URL in the sitemap.
+- **The tag must reach GitHub**, or nothing is published: `git ls-remote --tags origin vX.Y.Z` should print it.
+  `git push --follow-tags` only pushes annotated tags (`git tag -a`), so push the tag by name.
+- **If `create-pixiformui` fails to publish** (its step is allowed to fail): a `403 OIDC permission denied` means its
+  trusted-publisher settings on npmjs.com don't match (owner `rmsuthar`, repository `pixiformui`, workflow
+  `release.yml`, environment empty). Publish that version by hand: `node packages/create-pixiformui/build.mjs`, then
+  `npm login` and `npm publish --access public` in `packages/create-pixiformui`. A `404 Not Found` on publish means
+  you aren't logged in (`npm whoami`).
+- `npm run deploy:site` uses the repository's pinned Wrangler (a devDependency): no global install needed. It also
+  notifies IndexNow (Bing, Yandex, Naver, Seznam…) about every URL in the sitemap.
   Submit specific pages with `npm run indexnow -- /docs/install/`. The key file `site/public/<key>.txt` is public by
   design. Google doesn't use IndexNow: submit the sitemap in Search Console.
 - The Install page advertises the latest version **on npm**, so deploying before `npm publish` never shows CDN links

@@ -76,6 +76,13 @@ emails, or write to us.
   decrypt, plus the time it arrived, its size and the form it belongs to.
 - **Retention:** submissions are deleted automatically after 30 days (Free), 90 days (Starter) or 365 days (Pro),
   when you delete them, or when you delete the form.
+- **Encrypted files** (Starter and Pro) are encrypted in the visitor's browser to your key, including their names,
+  and stored as ciphertext in Cloudflare R2. They are deleted with their submission, with the form, by retention, or
+  after two hours if they were never attached to a submission.
+- **Ask your inbox** (optional): when you ask a question about submissions, your browser decrypts the submissions you
+  have loaded and sends their text (never password fields or files) to Cloudflare Workers AI to answer that one
+  question. Neither we nor the feature store the text or the answer, and we don't log them; only a monthly count of
+  questions is kept. Only use it for data you're allowed to process this way.
 - **Webhooks:** we keep the URLs you add, their signing secrets, and a delivery history for 30 days. Webhook payloads
   contain the submission still encrypted.
 - **Visitors' IP addresses** are used only for rate limiting, as a salted one-way hash, kept for about two minutes.
@@ -93,7 +100,7 @@ We use these providers to run the services. Each processes personal data only to
 
 | Provider | What for | Data involved |
 | --- | --- | --- |
-| Cloudflare, Inc. | Hosting, databases, storage, security | All of the data above, in Cloudflare's global network |
+| Cloudflare, Inc. | Hosting, databases, storage, security, and AI answers (Ask your inbox) | All of the data above, in Cloudflare's global network |
 | Resend (Plus Five Five, Inc.) | Sending email | Your email address and the email content |
 | Anthropic, PBC | Designing forms from a description (playground) | The description you type and the form's configuration |
 | Stripe, Inc. (when paid plans open) | Payments and invoices | Billing name, email, payment details (held by Stripe) |

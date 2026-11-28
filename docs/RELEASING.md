@@ -48,6 +48,15 @@ npm_config_cache="$(mktemp -d)" npm create pixiformui@latest /tmp/pf-check -- --
 After publishing, jsDelivr and unpkg serve the package automatically:
 `https://cdn.jsdelivr.net/npm/pixiformui@X.Y.Z/pixiformui.standalone.js`.
 
+## Security scans per version
+
+Every version tag also runs [snyk-release.yml](../.github/workflows/snyk-release.yml): `snyk test` (fails on
+high-severity issues), `snyk monitor` and a Snyk Code report, each recorded in the Snyk organization under the
+version (`--target-reference=v0.1.15`), so the dashboard shows what each release contained. Pushes to `main` are
+recorded as `main`. It runs read-only, separate from the publish job, with a pinned Snyk CLI. To scan an older
+tag, run the workflow by hand (Actions → Snyk (release) → Run workflow) with the tag. It needs the `SNYK_TOKEN`
+repository secret: `gh secret set SNYK_TOKEN` and paste a token from your Snyk account settings.
+
 ## Notes
 
 - **The tag must reach GitHub**, or nothing is published: `git ls-remote --tags origin vX.Y.Z` should print it.

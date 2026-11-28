@@ -1,0 +1,48 @@
+# Snyk scan per release: each version tag (v0.1.15, …) is recorded in the Snyk organization under that
+# version, so the dashboard shows what every published release contained. Separate from the npm publish job:
+# read-only permissions, no npm or OIDC token, and a pinned Snyk CLI. Skipped until SNYK_TOKEN is set.
+name: Snyk (release)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag to scan (e.g. v0.1.15)'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  SNYK_ORG: 6c00c6c3-d03f-4baf-8076-434221c1ddc4
+  SNYK: npx --yes snyk@1.1308.4
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Snyk test and monitor, tagged with the version
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          VERSION: ${{ inputs.ref || github.ref_name }}
+        run: |
+          if [ -z "$SNYK_TOKEN" ]; then
+            echo "SNYK_TOKEN secret is not set; skipping the Snyk release scan."
+            exit 0
+          fi
+          # Dependencies: fail on high-severity issues, and record this version's snapshot in Snyk.
+          $SNYK test --org=$SNYK_ORG --severity-threshold=high
+          $SNYK monitor --org=$SNYK_ORG --project-name=pixiform --target-reference="$VERSION"
+          # Code: a report in Snyk for this version (the .snyk policy excludes tests and dev scripts).
+          $SNYK code test --org=$SNYK_ORG --report --project-name=pixiform --target-reference="$VERSION"

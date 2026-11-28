@@ -40,8 +40,8 @@ jobs:
           fi
           npx --yes snyk@1.1308.4 test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            npx --yes snyk@1.1308.4 monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform
-            npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform
+            npx --yes snyk@1.1308.4 monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform --target-reference=main
+            npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform --target-reference=main
           else
             npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
           fi

@@ -222,7 +222,9 @@ function parseConfig(text: string): Record<string, unknown> {
   const value = JSON.parse(text) as unknown;
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The config must be a JSON object: { "fields": [ … ] }');
   const cfg = value as Record<string, unknown>;
-  if (!Array.isArray(cfg.fields) || cfg.fields.length === 0) throw new Error('Add at least one entry to "fields".');
+  const hasFields = Array.isArray(cfg.fields) && cfg.fields.length > 0;
+  const hasSteps = Array.isArray(cfg.steps) && cfg.steps.length > 0;
+  if (!hasFields && !hasSteps) throw new Error('Add at least one entry to "fields" (or to "steps" for a multi-step form).');
   // Callbacks are supplied by the playground; JSON can't carry them anyway.
   for (const k of ['onSubmit', 'on', 'action', 'session', 'analytics']) delete cfg[k];
   return cfg;

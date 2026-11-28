@@ -78,3 +78,21 @@ test('describe a form: the generated config fills the editor and the preview; ch
   await expect(page.locator('#ai-status')).toContainText('a lot of forms this hour');
   await expect(outline).toHaveAttribute('aria-label', 'Job application (changed)'); // the form stays
 });
+
+test('every preset in the dropdown builds a working form', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL);
+  const status = page.locator('#editor-status');
+  await expect(status).toHaveText(/Valid config/);
+  const presets = await page.locator('#preset option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value).filter((v) => v !== 'custom'));
+  expect(presets.length).toBeGreaterThanOrEqual(8);
+  for (const value of presets) {
+    await page.selectOption('#preset', value);
+    const title = (JSON.parse(await page.locator('#editor').inputValue()) as { title?: string }).title;
+    if (title) await expect(page.locator('#preview .pixiform-a11y'), value).toHaveAttribute('aria-label', title);
+    await expect(status, value).toHaveText(/Valid config/);
+    await expect(page.locator('#preview-meta'), value).toHaveText(/[1-9]\d* fields?/);
+  }
+  expect(errors).toEqual([]);
+});

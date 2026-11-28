@@ -82,7 +82,7 @@ export function applyStrings<T extends Obj>(config: T, map: Map<string, string>)
     for (const k of TEXT_KEYS) if (typeof f[k] === 'string') c[k] = tr(f[k]);
     if (Array.isArray(f.options)) c.options = (f.options as Obj[]).map((o) => (o && typeof o === 'object' ? { ...o, label: tr(o.label) } : o));
     // The library's default "<label> is required." in the visitor's language, with the translated label.
-    if (f.required && !f.requiredMessage && typeof c.label === 'string' && map.has(REQUIRED)) c.requiredMessage = map.get(REQUIRED)!.replace('{label}', c.label as string);
+    if (f.required && !f.requiredMessage && typeof c.label === 'string' && map.has(REQUIRED)) c.requiredMessage = map.get(REQUIRED)!.replace('{label}', () => c.label as string);
     if (Array.isArray(f.fields)) c.fields = (f.fields as Obj[]).map(field);
     return c;
   };

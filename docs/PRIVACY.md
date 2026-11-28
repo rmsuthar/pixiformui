@@ -1,6 +1,6 @@
 # Privacy policy
 
-**Last updated: 27 November 2026**
+**Last updated: 28 November 2026**
 
 This policy explains what personal data we collect when you use the PixiFormUI website
 (pixiformui.lets.gen.in), join the Pro & Cloud waitlist, or use PixiForm Cloud (cloud.pixiformui.lets.gen.in), why we
@@ -83,10 +83,14 @@ emails, or write to us.
   visitors' answers) are translated into each visitor's browser language by Cloudflare Workers AI and cached for 90
   days. The request reveals the visitor's preferred language; their IP is used only as a salted hash for rate limits.
 - **Quizzes** (optional): the questions and answer key you write, the candidate names you enter, and each candidate's
-  result (score, right or wrong per question, time taken, how often they left the page) are stored readable, so they
-  can be scored and shown to you. To score, the chosen option of each multiple-choice question is read; open answers
-  and everything else in a quiz submission stay end-to-end encrypted. Candidates' links are stored only as one-way
-  hashes. Quiz data is deleted with the form or your account.
+  result (score, right or wrong per question, which questions they were given, time taken) are stored readable, so
+  they can be scored and shown to you. With each result Cloud keeps an integrity log: a timeline of events such as
+  leaving the page, leaving full screen or pasting (with times, durations and character counts, never any text),
+  how many times the link was opened, and how many different browsers or networks opened it, counted with salted,
+  truncated hashes (the IP address and browser are never stored), plus a Low / Medium / High risk score worked out
+  from these. To score, the chosen option of each multiple-choice question is read; open answers and everything
+  else in a quiz submission stay end-to-end encrypted. Candidates' links are stored only as one-way hashes. Quiz
+  data is deleted with the form or your account.
 - **Ask your inbox** (optional): when you ask a question about submissions, your browser decrypts the submissions you
   have loaded and sends their text (never password fields or files) to Cloudflare Workers AI to answer that one
   question. Neither we nor the feature store the text or the answer, and we don't log them; only a monthly count of

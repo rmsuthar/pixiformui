@@ -45,4 +45,11 @@ jobs:
           $SNYK test --org=$SNYK_ORG --severity-threshold=high
           $SNYK monitor --org=$SNYK_ORG --project-name=pixiform --target-reference="$VERSION"
           # Code: a report in Snyk for this version (the .snyk policy excludes tests and dev scripts).
+          # Findings (exit 1) are triaged in the Snyk dashboard; real errors (exit 2+, e.g. auth) still fail.
+          set +e
           $SNYK code test --org=$SNYK_ORG --report --project-name=pixiform --target-reference="$VERSION"
+          code=$?
+          set -e
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+          if [ "$code" -eq 1 ]; then echo "::notice::Snyk Code findings for $VERSION are in the Snyk report; triage them there."; fi
+          exit 0

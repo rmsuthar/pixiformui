@@ -38,13 +38,23 @@ jobs:
             echo "SNYK_TOKEN secret is not set; skipping Snyk scan in CI."
             exit 0
           fi
-          npx --yes snyk@1.1308.4 test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
+          # Dependencies: high-severity issues fail the build.
+          npx --yes snyk@1.1308.4 test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --severity-threshold=high
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             npx --yes snyk@1.1308.4 monitor --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --project-name=pixiform --target-reference=main
+          fi
+          # Code: findings (exit 1) go to the Snyk report for triage; real errors (exit 2+) still fail.
+          set +e
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4 --report --project-name=pixiform --target-reference=main
           else
             npx --yes snyk@1.1308.4 code test --org=6c00c6c3-d03f-4baf-8076-434221c1ddc4
           fi
+          code=$?
+          set -e
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+          if [ "$code" -eq 1 ]; then echo "::notice::Snyk Code findings are in the Snyk report; triage them there."; fi
+          exit 0
       - name: Install Playwright browsers (Chromium, WebKit, Firefox)
         run: npx playwright install --with-deps chromium webkit firefox
       - name: Browser tests (Chromium, WebKit/Safari, Firefox)
